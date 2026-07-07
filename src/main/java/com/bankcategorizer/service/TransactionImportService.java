@@ -1,0 +1,292 @@
+package com.bankcategorizer.service;
+
+import com.bankcategorizer.dto.ImportResultResponse;
+import com.bankcategorizer.dto.ParsedTransactionRow;
+import com.bankcategorizer.exception.InvalidFileFormatException;
+import com.bankcategorizer.model.Transaction;
+import com.bankcategorizer.repository.TransactionRepository;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+
+/**
+ * Parses uploaded bank-transaction files (CSV or XLSX) into {@link Transaction} entities
+ * and persists them as uncategorized (category is left {@code null}; categorization is a
+ * later roadmap step).
+ *
+ * <p><b>Assumption:</b> for now only a simple, single common layout is supported: the first
+ * row is a header row containing (in any order, any casing) a date column, a description
+ * column, and an amount column. Header aliases are matched case-insensitively:
+ * <ul>
+ *     <li>date: "date"</li>
+ *     <li>description: "description", "desc"</li>
+ *     <li>amount: "amount", "value"</li>
+ * </ul>
+ * Bank-specific export formats are not handled yet. Rows that cannot be parsed (bad date,
+ * non-numeric amount, blank description, etc.) are skipped rather than failing the whole
+ * import; the number of skipped rows is reported back to the caller.
+ */
+@Service
+public class TransactionImportService {
+
+    private static final Logger log = LoggerFactory.getLogger(TransactionImportService.class);
+
+    private static final Set<String> DATE_HEADERS = Set.of("date");
+    private static final Set<String> DESCRIPTION_HEADERS = Set.of("description", "desc");
+    private static final Set<String> AMOUNT_HEADERS = Set.of("amount", "value");
+
+    // Minimal set of date formats we accept; note this as an assumption rather than an
+    // attempt to cover every bank's export locale/format.
+    private static final List<DateTimeFormatter> DATE_FORMATTERS = List.of(
+            DateTimeFormatter.ISO_LOCAL_DATE,
+            DateTimeFormatter.ofPattern("dd/MM/yyyy"),
+            DateTimeFormatter.ofPattern("MM/dd/yyyy")
+    );
+
+    private final TransactionRepository transactionRepository;
+
+    public TransactionImportService(TransactionRepository transactionRepository) {
+        this.transactionRepository = transactionRepository;
+    }
+
+    public ImportResultResponse importTransactions(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new InvalidFileFormatException("Uploaded file is empty");
+        }
+
+        FileType fileType = detectFileType(file);
+        List<List<String>> rawRows = readRawRows(file, fileType);
+
+        if (rawRows.isEmpty()) {
+            return new ImportResultResponse(file.getOriginalFilename(), 0, 0, 0);
+        }
+
+        ColumnIndexes columnIndexes = resolveColumnIndexes(rawRows.get(0));
+
+        List<ParsedTransactionRow> parsedRows = new ArrayList<>();
+        int skippedCount = 0;
+        List<List<String>> dataRows = rawRows.subList(1, rawRows.size());
+
+        for (List<String> row : dataRows) {
+            ParsedTransactionRow parsedRow = tryParseRow(row, columnIndexes);
+            if (parsedRow != null) {
+                parsedRows.add(parsedRow);
+            } else {
+                skippedCount++;
+            }
+        }
+
+        List<Transaction> transactions = parsedRows.stream()
+                .map(this::toTransaction)
+                .toList();
+        transactionRepository.saveAll(transactions);
+
+        log.info("Imported {} transactions ({} skipped) from file '{}'",
+                transactions.size(), skippedCount, file.getOriginalFilename());
+
+        return new ImportResultResponse(file.getOriginalFilename(), dataRows.size(), transactions.size(), skippedCount);
+    }
+
+    private Transaction toTransaction(ParsedTransactionRow row) {
+        return Transaction.builder()
+                .date(row.date())
+                .description(row.description())
+                .amount(row.amount())
+                .category(null)
+                .build();
+    }
+
+    private FileType detectFileType(MultipartFile file) {
+        String filename = file.getOriginalFilename();
+        String lowerName = filename == null ? "" : filename.toLowerCase(Locale.ROOT);
+
+        if (lowerName.endsWith(".csv")) {
+            return FileType.CSV;
+        }
+        if (lowerName.endsWith(".xlsx")) {
+            return FileType.XLSX;
+        }
+
+        String contentType = file.getContentType();
+        if (contentType != null) {
+            if (contentType.equalsIgnoreCase("text/csv")) {
+                return FileType.CSV;
+            }
+            if (contentType.equalsIgnoreCase("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) {
+                return FileType.XLSX;
+            }
+        }
+
+        throw new InvalidFileFormatException(
+                "Unsupported file type for '%s'. Only .csv and .xlsx files are supported".formatted(filename));
+    }
+
+    private List<List<String>> readRawRows(MultipartFile file, FileType fileType) {
+        try (InputStream inputStream = file.getInputStream()) {
+            return switch (fileType) {
+                case CSV -> readCsvRows(inputStream);
+                case XLSX -> readXlsxRows(inputStream);
+            };
+        } catch (IOException | UncheckedIOException e) {
+            throw new InvalidFileFormatException("Unable to read file '%s': %s"
+                    .formatted(file.getOriginalFilename(), e.getMessage()), e);
+        }
+    }
+
+    private List<List<String>> readCsvRows(InputStream inputStream) throws IOException {
+        List<List<String>> rows = new ArrayList<>();
+        CSVFormat format = CSVFormat.DEFAULT.builder().setTrim(true).build();
+        try (CSVParser parser = CSVParser.parse(inputStream, java.nio.charset.StandardCharsets.UTF_8, format)) {
+            for (CSVRecord record : parser) {
+                List<String> row = new ArrayList<>();
+                record.forEach(row::add);
+                rows.add(row);
+            }
+        }
+        return rows;
+    }
+
+    private List<List<String>> readXlsxRows(InputStream inputStream) throws IOException {
+        List<List<String>> rows = new ArrayList<>();
+        DataFormatter dataFormatter = new DataFormatter();
+        try (Workbook workbook = new XSSFWorkbook(inputStream)) {
+            Sheet sheet = workbook.getNumberOfSheets() > 0 ? workbook.getSheetAt(0) : null;
+            if (sheet == null) {
+                return rows;
+            }
+            for (Row row : sheet) {
+                List<String> cells = new ArrayList<>();
+                for (Cell cell : row) {
+                    cells.add(dataFormatter.formatCellValue(cell).trim());
+                }
+                rows.add(cells);
+            }
+        }
+        return rows;
+    }
+
+    private ColumnIndexes resolveColumnIndexes(List<String> headerRow) {
+        Integer dateIndex = null;
+        Integer descriptionIndex = null;
+        Integer amountIndex = null;
+
+        for (int i = 0; i < headerRow.size(); i++) {
+            String normalized = headerRow.get(i) == null ? "" : headerRow.get(i).trim().toLowerCase(Locale.ROOT);
+            if (DATE_HEADERS.contains(normalized)) {
+                dateIndex = i;
+            } else if (DESCRIPTION_HEADERS.contains(normalized)) {
+                descriptionIndex = i;
+            } else if (AMOUNT_HEADERS.contains(normalized)) {
+                amountIndex = i;
+            }
+        }
+
+        if (dateIndex == null || descriptionIndex == null || amountIndex == null) {
+            throw new InvalidFileFormatException(
+                    "File header is missing one or more required columns (date, description, amount)");
+        }
+
+        return new ColumnIndexes(dateIndex, descriptionIndex, amountIndex);
+    }
+
+    private ParsedTransactionRow tryParseRow(List<String> row, ColumnIndexes columnIndexes) {
+        String rawDate = cellAt(row, columnIndexes.dateIndex());
+        String rawDescription = cellAt(row, columnIndexes.descriptionIndex());
+        String rawAmount = cellAt(row, columnIndexes.amountIndex());
+
+        if (rawDescription == null || rawDescription.isBlank()) {
+            log.debug("Skipping row: blank description ({})", row);
+            return null;
+        }
+
+        LocalDate date = parseDate(rawDate);
+        if (date == null) {
+            log.debug("Skipping row: unparseable date '{}' ({})", rawDate, row);
+            return null;
+        }
+
+        BigDecimal amount = parseAmount(rawAmount);
+        if (amount == null) {
+            log.debug("Skipping row: unparseable amount '{}' ({})", rawAmount, row);
+            return null;
+        }
+
+        return new ParsedTransactionRow(date, rawDescription.trim(), amount);
+    }
+
+    private String cellAt(List<String> row, int index) {
+        return index < row.size() ? row.get(index) : null;
+    }
+
+    private LocalDate parseDate(String rawDate) {
+        if (rawDate == null || rawDate.isBlank()) {
+            return null;
+        }
+        String trimmed = rawDate.trim();
+        for (DateTimeFormatter formatter : DATE_FORMATTERS) {
+            try {
+                return LocalDate.parse(trimmed, formatter);
+            } catch (DateTimeParseException ignored) {
+                // try next formatter
+            }
+        }
+        return null;
+    }
+
+    private BigDecimal parseAmount(String rawAmount) {
+        if (rawAmount == null || rawAmount.isBlank()) {
+            return null;
+        }
+        // Strip everything except digits, separators and sign (e.g. currency symbols/spaces).
+        String cleaned = rawAmount.trim().replaceAll("[^0-9,.\\-]", "");
+        if (cleaned.isEmpty()) {
+            return null;
+        }
+
+        boolean hasComma = cleaned.indexOf(',') >= 0;
+        boolean hasDot = cleaned.indexOf('.') >= 0;
+
+        if (hasComma && hasDot) {
+            // Assume ',' is a thousands separator and '.' is the decimal separator, e.g. "1,234.56".
+            cleaned = cleaned.replace(",", "");
+        } else if (hasComma) {
+            // Assume ',' is used as the decimal separator, e.g. "1234,56".
+            cleaned = cleaned.replace(",", ".");
+        }
+
+        try {
+            return new BigDecimal(cleaned);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private enum FileType {
+        CSV, XLSX
+    }
+
+    private record ColumnIndexes(int dateIndex, int descriptionIndex, int amountIndex) {
+    }
+}
