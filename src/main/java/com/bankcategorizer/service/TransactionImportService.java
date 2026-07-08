@@ -3,6 +3,7 @@ package com.bankcategorizer.service;
 import com.bankcategorizer.dto.ImportResultResponse;
 import com.bankcategorizer.dto.ParsedTransactionRow;
 import com.bankcategorizer.exception.InvalidFileFormatException;
+import com.bankcategorizer.model.Category;
 import com.bankcategorizer.model.Transaction;
 import com.bankcategorizer.repository.TransactionRepository;
 import org.apache.commons.csv.CSVFormat;
@@ -30,11 +31,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
- * Parses uploaded bank-transaction files (CSV or XLSX) into {@link Transaction} entities
- * and persists them as uncategorized (category is left {@code null}; categorization is a
- * later roadmap step).
+ * Parses uploaded bank-transaction files (CSV or XLSX) into {@link Transaction} entities and
+ * persists them. Each parsed row is matched against existing category keywords via
+ * {@link CategorizationService}; transactions with no matching category are saved
+ * uncategorized ({@code category} left {@code null}).
  *
  * <p><b>Assumption:</b> for now only a simple, single common layout is supported: the first
  * row is a header row containing (in any order, any casing) a date column, a description
@@ -57,6 +60,14 @@ public class TransactionImportService {
     private static final Set<String> DESCRIPTION_HEADERS = Set.of("description", "desc");
     private static final Set<String> AMOUNT_HEADERS = Set.of("amount", "value");
 
+    // Only whitespace and common currency symbols are treated as harmless noise around an
+    // amount (e.g. "$ 45.30", "45,30 €"). Anything else left over after stripping those is
+    // presumed to make the value genuinely malformed, so it's rejected rather than silently
+    // dropped (dropping arbitrary characters, e.g. a stray letter, could corrupt the value
+    // instead of causing the row to be skipped).
+    private static final Pattern CURRENCY_NOISE = Pattern.compile("[\\s$€£¥]");
+    private static final Pattern VALID_NUMERIC_AMOUNT = Pattern.compile("^-?[0-9]+([.,][0-9]+)*$");
+
     // Minimal set of date formats we accept; note this as an assumption rather than an
     // attempt to cover every bank's export locale/format.
     private static final List<DateTimeFormatter> DATE_FORMATTERS = List.of(
@@ -66,9 +77,12 @@ public class TransactionImportService {
     );
 
     private final TransactionRepository transactionRepository;
+    private final CategorizationService categorizationService;
 
-    public TransactionImportService(TransactionRepository transactionRepository) {
+    public TransactionImportService(TransactionRepository transactionRepository,
+                                     CategorizationService categorizationService) {
         this.transactionRepository = transactionRepository;
+        this.categorizationService = categorizationService;
     }
 
     public ImportResultResponse importTransactions(MultipartFile file) {
@@ -80,7 +94,7 @@ public class TransactionImportService {
         List<List<String>> rawRows = readRawRows(file, fileType);
 
         if (rawRows.isEmpty()) {
-            return new ImportResultResponse(file.getOriginalFilename(), 0, 0, 0);
+            return new ImportResultResponse(file.getOriginalFilename(), 0, 0, 0, 0, 0);
         }
 
         ColumnIndexes columnIndexes = resolveColumnIndexes(rawRows.get(0));
@@ -98,23 +112,36 @@ public class TransactionImportService {
             }
         }
 
-        List<Transaction> transactions = parsedRows.stream()
-                .map(this::toTransaction)
-                .toList();
+        List<Category> categories = parsedRows.isEmpty()
+                ? List.of()
+                : categorizationService.loadCategories();
+
+        List<Transaction> transactions = new ArrayList<>(parsedRows.size());
+        int categorizedCount = 0;
+        for (ParsedTransactionRow row : parsedRows) {
+            Category matchedCategory = categorizationService.match(row.description(), categories).orElse(null);
+            if (matchedCategory != null) {
+                categorizedCount++;
+            }
+            transactions.add(toTransaction(row, matchedCategory));
+        }
         transactionRepository.saveAll(transactions);
 
-        log.info("Imported {} transactions ({} skipped) from file '{}'",
-                transactions.size(), skippedCount, file.getOriginalFilename());
+        int uncategorizedCount = transactions.size() - categorizedCount;
 
-        return new ImportResultResponse(file.getOriginalFilename(), dataRows.size(), transactions.size(), skippedCount);
+        log.info("Imported {} transactions ({} categorized, {} uncategorized, {} skipped) from file '{}'",
+                transactions.size(), categorizedCount, uncategorizedCount, skippedCount, file.getOriginalFilename());
+
+        return new ImportResultResponse(file.getOriginalFilename(), dataRows.size(), transactions.size(),
+                skippedCount, categorizedCount, uncategorizedCount);
     }
 
-    private Transaction toTransaction(ParsedTransactionRow row) {
+    private Transaction toTransaction(ParsedTransactionRow row, Category category) {
         return Transaction.builder()
                 .date(row.date())
                 .description(row.description())
                 .amount(row.amount())
-                .category(null)
+                .category(category)
                 .build();
     }
 
@@ -259,9 +286,10 @@ public class TransactionImportService {
         if (rawAmount == null || rawAmount.isBlank()) {
             return null;
         }
-        // Strip everything except digits, separators and sign (e.g. currency symbols/spaces).
-        String cleaned = rawAmount.trim().replaceAll("[^0-9,.\\-]", "");
-        if (cleaned.isEmpty()) {
+        // Strip harmless surrounding noise only (whitespace, currency symbols); anything else
+        // remaining (e.g. a stray letter) makes the value genuinely malformed.
+        String cleaned = CURRENCY_NOISE.matcher(rawAmount.trim()).replaceAll("");
+        if (cleaned.isEmpty() || !VALID_NUMERIC_AMOUNT.matcher(cleaned).matches()) {
             return null;
         }
 
@@ -269,8 +297,17 @@ public class TransactionImportService {
         boolean hasDot = cleaned.indexOf('.') >= 0;
 
         if (hasComma && hasDot) {
-            // Assume ',' is a thousands separator and '.' is the decimal separator, e.g. "1,234.56".
-            cleaned = cleaned.replace(",", "");
+            // Both separators present: whichever one appears last is the decimal separator
+            // (e.g. "1.200,50" -> ',' is last -> European decimal comma -> 1200.50;
+            // "1,200.50" -> '.' is last -> US decimal point -> 1200.50). The other separator
+            // is treated as a thousands grouping separator and stripped.
+            int lastComma = cleaned.lastIndexOf(',');
+            int lastDot = cleaned.lastIndexOf('.');
+            if (lastComma > lastDot) {
+                cleaned = cleaned.replace(".", "").replace(",", ".");
+            } else {
+                cleaned = cleaned.replace(",", "");
+            }
         } else if (hasComma) {
             // Assume ',' is used as the decimal separator, e.g. "1234,56".
             cleaned = cleaned.replace(",", ".");

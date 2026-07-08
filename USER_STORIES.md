@@ -37,6 +37,7 @@ As a user, I want newly imported transactions to be automatically assigned a cat
 - On import, each parsed transaction is matched against existing category rules; the first/best match is assigned.
 - Transactions with no matching rule are saved as uncategorized (existing behavior, unchanged).
 - Import response includes how many transactions were auto-categorized vs. left uncategorized.
+- On first run (empty category table), the app seeds a default set of common categories with well-known merchant keywords, so out-of-the-box categorization works without manual setup; this seeding never overwrites or merges into an existing (non-empty) category set.
 
 ### US-4: Manually (re)categorize a transaction 🔜
 As a user, I want to view my uncategorized transactions and assign or correct a category myself so that I can fix mistakes the automatic categorization makes.
