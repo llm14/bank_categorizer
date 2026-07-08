@@ -31,14 +31,16 @@ class TransactionImportControllerTest {
                 "file", "transactions.csv", "text/csv", "Date,Description,Amount\n2024-01-01,Test,10.00\n".getBytes());
 
         given(transactionImportService.importTransactions(any()))
-                .willReturn(new ImportResultResponse("transactions.csv", 1, 1, 0));
+                .willReturn(new ImportResultResponse("transactions.csv", 1, 1, 0, 1, 0));
 
         mockMvc.perform(multipart("/api/v1/transactions/import").file(file))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.fileName").value("transactions.csv"))
                 .andExpect(jsonPath("$.totalRows").value(1))
                 .andExpect(jsonPath("$.importedCount").value(1))
-                .andExpect(jsonPath("$.skippedCount").value(0));
+                .andExpect(jsonPath("$.skippedCount").value(0))
+                .andExpect(jsonPath("$.categorizedCount").value(1))
+                .andExpect(jsonPath("$.uncategorizedCount").value(0));
     }
 
     @Test

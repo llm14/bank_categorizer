@@ -39,17 +39,20 @@ class CategoryControllerTest {
 
     @Test
     void create_validRequest_returns201WithBody() throws Exception {
-        given(categoryService.create(any())).willReturn(new CategoryResponse(1L, "Groceries", "Supermarket spending"));
+        given(categoryService.create(any())).willReturn(
+                new CategoryResponse(1L, "Groceries", "Supermarket spending", List.of("supermarket", "grocery")));
 
         mockMvc.perform(post("/api/v1/categories")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name":"Groceries","description":"Supermarket spending"}
+                                {"name":"Groceries","description":"Supermarket spending","keywords":["supermarket","grocery"]}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.name").value("Groceries"))
-                .andExpect(jsonPath("$.description").value("Supermarket spending"));
+                .andExpect(jsonPath("$.description").value("Supermarket spending"))
+                .andExpect(jsonPath("$.keywords.length()").value(2))
+                .andExpect(jsonPath("$.keywords[0]").value("supermarket"));
     }
 
     @Test
@@ -80,8 +83,8 @@ class CategoryControllerTest {
     @Test
     void findAll_returns200WithList() throws Exception {
         given(categoryService.findAll()).willReturn(List.of(
-                new CategoryResponse(1L, "Groceries", null),
-                new CategoryResponse(2L, "Rent", "Monthly rent")
+                new CategoryResponse(1L, "Groceries", null, List.of("supermarket")),
+                new CategoryResponse(2L, "Rent", "Monthly rent", List.of())
         ));
 
         mockMvc.perform(get("/api/v1/categories"))

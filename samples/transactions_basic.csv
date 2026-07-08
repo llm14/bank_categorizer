@@ -1,0 +1,13 @@
+Date,Description,Amount
+2026-06-01,WALMART SUPERCENTER #1234,-54.32
+2026-06-02,Uber Trip 8342,-12.50
+2026-06-03,Rent Payment - June,-1200.00
+2026-06-04,NETFLIX.COM SUBSCRIPTION,-15.99
+2026-06-05,Salary Deposit ACME Corp,3000.00
+not-a-date,Some Store,-20.00
+2026-06-07,Coffee Shop Purchase,abc
+2026-06-08,,-10.00
+2026-06-09,SHELL GAS STATION,-45.00
+2026-06-10,Landlord Bank Transfer,-1200.00
+2026-06-11,European Furniture Store,"-1.200,50"
+2026-06-12,Malformed Amount Row,12x50

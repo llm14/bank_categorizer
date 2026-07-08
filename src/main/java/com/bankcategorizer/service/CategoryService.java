@@ -12,7 +12,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Business logic for managing spending categories: creation with a uniqueness check,
@@ -41,6 +45,7 @@ public class CategoryService {
         Category category = Category.builder()
                 .name(request.name())
                 .description(request.description())
+                .keywords(normalizeKeywords(request.keywords()))
                 .build();
         Category saved = categoryRepository.save(category);
         return toResponse(saved);
@@ -65,6 +70,18 @@ public class CategoryService {
     }
 
     private CategoryResponse toResponse(Category category) {
-        return new CategoryResponse(category.getId(), category.getName(), category.getDescription());
+        return new CategoryResponse(category.getId(), category.getName(), category.getDescription(),
+                List.copyOf(category.getKeywords()));
+    }
+
+    private Set<String> normalizeKeywords(List<String> keywords) {
+        if (keywords == null) {
+            return new LinkedHashSet<>();
+        }
+        return keywords.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(keyword -> !keyword.isEmpty())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 }
