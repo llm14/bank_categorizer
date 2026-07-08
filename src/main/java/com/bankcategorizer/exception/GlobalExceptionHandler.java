@@ -39,6 +39,12 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
+    @ExceptionHandler(InvalidTransactionFilterException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidTransactionFilter(InvalidTransactionFilterException ex) {
+        log.warn("Invalid transaction filter: {}", ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationFailure(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult().getFieldErrors().stream()
