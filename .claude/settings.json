@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker info)",
+      "Bash(docker info *)",
+      "Bash(docker ps *)",
+      "Bash(docker start bank-categorizer-pg)",
+      "Bash(docker stop bank-categorizer-pg)",
+      "Bash(docker run -d --name bank-categorizer-pg *)",
+      "Bash(docker exec bank-categorizer-pg *)",
+      "Bash(curl http://localhost:8080/*)",
+      "Bash(curl http://127.0.0.1:8080/*)",
+      "PowerShell(Start-Process \"C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe\")"
+    ]
+  }
+}

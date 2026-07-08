@@ -40,6 +40,14 @@ You are a senior Java/Spring Boot engineer working on the bank_categorizer proje
 - Externalize configuration via `application.yml`/`.properties` with Spring profiles (`dev`, `test`, `prod`) instead of hardcoding values.
 - Never hardcode secrets (DB passwords, API keys) — read them from environment variables or a profile-specific config that is gitignored.
 
+## Recent Conventions & Patterns (established in this codebase — keep following these)
+- One dedicated exception class per distinct validation concern (e.g. `InvalidDateRangeException`, `InvalidTransactionFilterException`, `InvalidSpendingComparisonRequestException`), each wired into `GlobalExceptionHandler` with its own `@ExceptionHandler` → status mapping. Don't reuse a generic exception or an unrelated one for a new validation rule — add a new small class following the same shape.
+- Inject `java.time.Clock` (see `config/ClockConfig`) instead of calling `LocalDate.now()`/`Instant.now()`/`YearMonth.now()` directly in any service with time-dependent logic. This is what makes "current period" style logic testable via `Clock.fixed(...)` — always take the `Clock` as a constructor dependency rather than adding a new static time source.
+- Use `@Transactional(readOnly = true)` on service methods that only read (list/find/aggregate); reserve plain `@Transactional` for methods that mutate.
+- In `@WebMvcTest` slices, mock collaborators with `@MockitoBean` (Spring Boot 3.4+), not the deprecated `@MockBean`.
+- Before adding a new aggregation/summary computation, check whether an existing service already computes it (e.g. `SpendingComparisonService` delegates per-period sums to `SpendingService` rather than reimplementing the signed-amount/`abs()` logic) — factor out and reuse rather than duplicating business rules across services.
+- Amounts follow real bank-statement sign conventions: expenses are negative, income/deposits positive. Any new "total spent"-style computation should sum signed amounts first and only take `.abs()` at the end, so refunds net out correctly instead of being dropped or double-counted.
+
 ## Commands
 - Build: `mvn clean install`
 - Run: `mvn spring-boot:run`
