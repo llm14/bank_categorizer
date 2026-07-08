@@ -1,8 +1,12 @@
 package com.bankcategorizer.controller;
 
+import com.bankcategorizer.dto.PeriodSpending;
+import com.bankcategorizer.dto.SpendingComparisonResponse;
 import com.bankcategorizer.dto.SpendingResponse;
 import com.bankcategorizer.exception.InvalidDateRangeException;
+import com.bankcategorizer.exception.InvalidSpendingComparisonRequestException;
 import com.bankcategorizer.exception.ResourceNotFoundException;
+import com.bankcategorizer.service.SpendingComparisonService;
 import com.bankcategorizer.service.SpendingService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +34,9 @@ class SpendingControllerTest {
 
     @MockitoBean
     private SpendingService spendingService;
+
+    @MockitoBean
+    private SpendingComparisonService spendingComparisonService;
 
     private final LocalDate from = LocalDate.of(2024, 1, 1);
     private final LocalDate to = LocalDate.of(2024, 1, 31);
@@ -100,5 +107,88 @@ class SpendingControllerTest {
         mockMvc.perform(get("/api/v1/spending"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void compareSpending_happyPath_returns200WithComparison() throws Exception {
+        PeriodSpending current = new PeriodSpending("2026-07", LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31), new BigDecimal("100.00"));
+        PeriodSpending previous = new PeriodSpending("2026-06", LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30), new BigDecimal("50.00"));
+        SpendingComparisonResponse response = new SpendingComparisonResponse(
+                1L, "Groceries", "month", 1, current, List.of(previous), new BigDecimal("50.00"));
+        given(spendingComparisonService.compare(1L, "month", 1)).willReturn(response);
+
+        mockMvc.perform(get("/api/v1/spending/compare")
+                        .param("category", "1")
+                        .param("period", "month")
+                        .param("lookback", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.categoryId").value(1))
+                .andExpect(jsonPath("$.categoryName").value("Groceries"))
+                .andExpect(jsonPath("$.period").value("month"))
+                .andExpect(jsonPath("$.lookback").value(1))
+                .andExpect(jsonPath("$.current.label").value("2026-07"))
+                .andExpect(jsonPath("$.previousPeriods.length()").value(1))
+                .andExpect(jsonPath("$.previousPeriods[0].label").value("2026-06"))
+                .andExpect(jsonPath("$.previousAverage").value(50.00));
+    }
+
+    @Test
+    void compareSpending_categoryNotFound_returns404() throws Exception {
+        willThrow(new ResourceNotFoundException("Category 99 not found"))
+                .given(spendingComparisonService).compare(eq(99L), any(), any());
+
+        mockMvc.perform(get("/api/v1/spending/compare")
+                        .param("category", "99")
+                        .param("period", "month")
+                        .param("lookback", "3"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("Category 99 not found"));
+    }
+
+    @Test
+    void compareSpending_unsupportedPeriod_returns400() throws Exception {
+        willThrow(new InvalidSpendingComparisonRequestException("Unsupported period 'week': only 'month' is currently supported"))
+                .given(spendingComparisonService).compare(eq(1L), eq("week"), any());
+
+        mockMvc.perform(get("/api/v1/spending/compare")
+                        .param("category", "1")
+                        .param("period", "week")
+                        .param("lookback", "3"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void compareSpending_missingLookback_returns400() throws Exception {
+        willThrow(new InvalidSpendingComparisonRequestException("'lookback' must be a positive integer"))
+                .given(spendingComparisonService).compare(eq(1L), eq("month"), eq(null));
+
+        mockMvc.perform(get("/api/v1/spending/compare")
+                        .param("category", "1")
+                        .param("period", "month"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void compareSpending_negativeLookback_returns400() throws Exception {
+        willThrow(new InvalidSpendingComparisonRequestException("'lookback' must be a positive integer"))
+                .given(spendingComparisonService).compare(eq(1L), eq("month"), eq(-1));
+
+        mockMvc.perform(get("/api/v1/spending/compare")
+                        .param("category", "1")
+                        .param("period", "month")
+                        .param("lookback", "-1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void compareSpending_missingCategory_returns400() throws Exception {
+        mockMvc.perform(get("/api/v1/spending/compare")
+                        .param("period", "month")
+                        .param("lookback", "3"))
+                .andExpect(status().isBadRequest());
     }
 }
