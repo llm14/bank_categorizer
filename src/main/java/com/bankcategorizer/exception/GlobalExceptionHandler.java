@@ -51,6 +51,12 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
+    @ExceptionHandler(InvalidSpendingComparisonRequestException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidSpendingComparisonRequest(InvalidSpendingComparisonRequestException ex) {
+        log.warn("Invalid spending comparison request: {}", ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationFailure(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult().getFieldErrors().stream()
