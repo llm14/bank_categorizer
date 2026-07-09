@@ -7,6 +7,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.OffsetDateTime;
 import java.util.stream.Collectors;
@@ -84,6 +87,30 @@ public class GlobalExceptionHandler {
         String message = "Parameter '%s' has invalid value '%s'; expected %s"
                 .formatted(ex.getName(), ex.getValue(), requiredType);
         log.warn("Method argument type mismatch: {}", message);
+        return buildResponse(HttpStatus.BAD_REQUEST, message);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+        String message = "Request method '%s' is not supported; supported methods: %s"
+                .formatted(ex.getMethod(), ex.getSupportedHttpMethods());
+        log.warn("Method not supported: {}", message);
+        return buildResponse(HttpStatus.METHOD_NOT_ALLOWED, message);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFound(NoResourceFoundException ex) {
+        String message = "No resource found for %s %s".formatted(ex.getHttpMethod(), ex.getResourcePath());
+        log.warn("No resource found: {}", message);
+        return buildResponse(HttpStatus.NOT_FOUND, message);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex) {
+        String message = ex.getContentType() != null
+                ? "Content type '%s' is not supported".formatted(ex.getContentType())
+                : "The request's content type is not supported";
+        log.warn("Media type not supported: {}", message);
         return buildResponse(HttpStatus.BAD_REQUEST, message);
     }
 

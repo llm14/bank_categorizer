@@ -165,4 +165,24 @@ class TransactionControllerTest {
                 .andExpect(jsonPath("$.message").exists())
                 .andExpect(jsonPath("$.timestamp").exists());
     }
+
+    @Test
+    void getById_onlyPatchMapped_returns405WithErrorBody() throws Exception {
+        mockMvc.perform(get("/api/v1/transactions/{id}", 3L))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.status").value(405))
+                .andExpect(jsonPath("$.error").value("Method Not Allowed"))
+                .andExpect(jsonPath("$.message").exists())
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
+    void unknownRoute_returns404WithErrorBody() throws Exception {
+        mockMvc.perform(get("/api/v1/nonexistent"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").exists())
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
 }
