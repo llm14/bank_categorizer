@@ -1,0 +1,17 @@
+target/
+.git/
+.gitignore
+.idea/
+*.iml
+.vscode/
+.mvn/
+.claude/
+*.log
+HELP.md
+README.md
+USER_STORIES.md
+BACKLOG.md
+CLAUDE.md
+samples/
+postman/
+.env
