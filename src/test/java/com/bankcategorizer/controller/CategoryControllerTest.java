@@ -112,4 +112,30 @@ class CategoryControllerTest {
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.message").value("Category 99 not found"));
     }
+
+    @Test
+    void delete_nonNumericId_returns400WithErrorBody() throws Exception {
+        mockMvc.perform(delete("/api/v1/categories/{id}", "abc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").exists())
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
+    void create_duplicateNameRace_returns409WithErrorBody() throws Exception {
+        willThrow(new org.springframework.dao.DataIntegrityViolationException("duplicate key value violates unique constraint"))
+                .given(categoryService).create(any());
+
+        mockMvc.perform(post("/api/v1/categories")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Groceries"}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.error").value("Conflict"))
+                .andExpect(jsonPath("$.message").value("A record with conflicting unique data already exists"));
+    }
 }

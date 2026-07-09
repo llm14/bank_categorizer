@@ -4,18 +4,15 @@ import com.bankcategorizer.dto.SpendingResponse;
 import com.bankcategorizer.exception.InvalidDateRangeException;
 import com.bankcategorizer.exception.ResourceNotFoundException;
 import com.bankcategorizer.model.Category;
-import com.bankcategorizer.model.Transaction;
 import com.bankcategorizer.repository.CategoryRepository;
+import com.bankcategorizer.repository.CategorySpendingTotal;
 import com.bankcategorizer.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Business logic for answering "how much did I spend?" questions: a single category's
@@ -43,33 +40,19 @@ public class SpendingService {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category %d not found".formatted(categoryId)));
 
-        List<Transaction> transactions = transactionRepository.findByCategoryIdAndDateBetween(categoryId, from, to);
-        BigDecimal totalSpent = sumAmounts(transactions).abs();
+        BigDecimal netAmount = transactionRepository.sumAmountByCategoryAndDateBetween(categoryId, from, to);
+        BigDecimal totalSpent = netAmount.abs();
         return new SpendingResponse(category.getId(), category.getName(), from, to, totalSpent);
     }
 
     @Transactional(readOnly = true)
     public List<SpendingResponse> getSpendingBreakdown(LocalDate from, LocalDate to) {
         validateRange(from, to);
-        List<Transaction> transactions = transactionRepository.findByDateBetween(from, to);
+        List<CategorySpendingTotal> totals = transactionRepository.sumAmountByCategoryGroupedForDateBetween(from, to);
 
-        Map<Long, List<Transaction>> byCategoryId = transactions.stream()
-                .filter(transaction -> transaction.getCategory() != null)
-                .collect(Collectors.groupingBy(transaction -> transaction.getCategory().getId(), LinkedHashMap::new, Collectors.toList()));
-
-        return byCategoryId.values().stream()
-                .map(categoryTransactions -> {
-                    Category category = categoryTransactions.get(0).getCategory();
-                    BigDecimal totalSpent = sumAmounts(categoryTransactions).abs();
-                    return new SpendingResponse(category.getId(), category.getName(), from, to, totalSpent);
-                })
+        return totals.stream()
+                .map(total -> new SpendingResponse(total.categoryId(), total.categoryName(), from, to, total.totalAmount().abs()))
                 .toList();
-    }
-
-    private BigDecimal sumAmounts(List<Transaction> transactions) {
-        return transactions.stream()
-                .map(Transaction::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private void validateRange(LocalDate from, LocalDate to) {

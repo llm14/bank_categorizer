@@ -115,11 +115,16 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/transactions",
+              "raw": "{{baseUrl}}/api/v1/transactions?page=0&size=20&sort=date,desc",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "transactions"]
+              "path": ["api", "v1", "transactions"],
+              "query": [
+                { "key": "page", "value": "0", "description": "0-indexed page number" },
+                { "key": "size", "value": "20", "description": "Page size" },
+                { "key": "sort", "value": "date,desc", "description": "Sort field and direction, e.g. date,asc or amount,desc" }
+              ]
             },
-            "description": "Lists every transaction (categorized and uncategorized)."
+            "description": "Lists every transaction (categorized and uncategorized), paginated. All three query params are optional (defaults: page=0, size=20, sort=date,desc) — response is a page envelope: `{ content, page, size, totalElements, totalPages }`."
           },
           "response": []
         },
@@ -129,14 +134,16 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/transactions?category=uncategorized",
+              "raw": "{{baseUrl}}/api/v1/transactions?category=uncategorized&page=0&size=20",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "transactions"],
               "query": [
-                { "key": "category", "value": "uncategorized" }
+                { "key": "category", "value": "uncategorized" },
+                { "key": "page", "value": "0", "description": "0-indexed page number" },
+                { "key": "size", "value": "20", "description": "Page size" }
               ]
             },
-            "description": "Lists only the transactions with no category assigned — the ones worth reviewing and fixing via 'Update Transaction Category' below. Any `category` value other than 'uncategorized' returns 400."
+            "description": "Lists only the transactions with no category assigned — the ones worth reviewing and fixing via 'Update Transaction Category' below. Paginated the same way as 'List All Transactions'. Any `category` value other than 'uncategorized' returns 400."
           },
           "response": []
         },

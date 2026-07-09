@@ -4,8 +4,8 @@ import com.bankcategorizer.dto.SpendingResponse;
 import com.bankcategorizer.exception.InvalidDateRangeException;
 import com.bankcategorizer.exception.ResourceNotFoundException;
 import com.bankcategorizer.model.Category;
-import com.bankcategorizer.model.Transaction;
 import com.bankcategorizer.repository.CategoryRepository;
+import com.bankcategorizer.repository.CategorySpendingTotal;
 import com.bankcategorizer.repository.TransactionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,12 +47,8 @@ class SpendingServiceTest {
     @Test
     void getSpendingForCategory_mixedPositiveAndNegativeAmounts_returnsAbsoluteOfNetSum() {
         Category groceries = Category.builder().id(1L).name("Groceries").build();
-        Transaction expense = Transaction.builder()
-                .id(1L).date(from).description("Walmart").amount(new BigDecimal("-54.32")).category(groceries).build();
-        Transaction refund = Transaction.builder()
-                .id(2L).date(from).description("Walmart refund").amount(new BigDecimal("10.00")).category(groceries).build();
         when(categoryRepository.findById(1L)).thenReturn(Optional.of(groceries));
-        when(transactionRepository.findByCategoryIdAndDateBetween(1L, from, to)).thenReturn(List.of(expense, refund));
+        when(transactionRepository.sumAmountByCategoryAndDateBetween(1L, from, to)).thenReturn(new BigDecimal("-44.32"));
 
         SpendingResponse response = spendingService.getSpendingForCategory(1L, from, to);
 
@@ -68,14 +64,14 @@ class SpendingServiceTest {
         assertThatThrownBy(() -> spendingService.getSpendingForCategory(99L, from, to))
                 .isInstanceOf(ResourceNotFoundException.class);
 
-        verify(transactionRepository, never()).findByCategoryIdAndDateBetween(any(), any(), any());
+        verify(transactionRepository, never()).sumAmountByCategoryAndDateBetween(any(), any(), any());
     }
 
     @Test
     void getSpendingForCategory_noMatchingTransactions_returnsZeroTotal() {
         Category groceries = Category.builder().id(1L).name("Groceries").build();
         when(categoryRepository.findById(1L)).thenReturn(Optional.of(groceries));
-        when(transactionRepository.findByCategoryIdAndDateBetween(1L, from, to)).thenReturn(List.of());
+        when(transactionRepository.sumAmountByCategoryAndDateBetween(1L, from, to)).thenReturn(BigDecimal.ZERO);
 
         SpendingResponse response = spendingService.getSpendingForCategory(1L, from, to);
 
@@ -98,13 +94,10 @@ class SpendingServiceTest {
 
     @Test
     void getSpendingBreakdown_multipleCategories_returnsOneEntryPerCategory() {
-        Category groceries = Category.builder().id(1L).name("Groceries").build();
-        Category transport = Category.builder().id(2L).name("Transport").build();
-        Transaction groceriesTx = Transaction.builder()
-                .id(1L).date(from).description("Supermarket").amount(new BigDecimal("-20.00")).category(groceries).build();
-        Transaction transportTx = Transaction.builder()
-                .id(2L).date(from).description("Bus ticket").amount(new BigDecimal("-5.00")).category(transport).build();
-        when(transactionRepository.findByDateBetween(from, to)).thenReturn(List.of(groceriesTx, transportTx));
+        when(transactionRepository.sumAmountByCategoryGroupedForDateBetween(from, to)).thenReturn(List.of(
+                new CategorySpendingTotal(1L, "Groceries", new BigDecimal("-20.00")),
+                new CategorySpendingTotal(2L, "Transport", new BigDecimal("-5.00"))
+        ));
 
         List<SpendingResponse> breakdown = spendingService.getSpendingBreakdown(from, to);
 
@@ -117,12 +110,11 @@ class SpendingServiceTest {
 
     @Test
     void getSpendingBreakdown_excludesUncategorizedTransactions() {
-        Category groceries = Category.builder().id(1L).name("Groceries").build();
-        Transaction groceriesTx = Transaction.builder()
-                .id(1L).date(from).description("Supermarket").amount(new BigDecimal("-20.00")).category(groceries).build();
-        Transaction uncategorizedTx = Transaction.builder()
-                .id(2L).date(from).description("Unknown merchant").amount(new BigDecimal("-15.00")).build();
-        when(transactionRepository.findByDateBetween(from, to)).thenReturn(List.of(groceriesTx, uncategorizedTx));
+        // The repository query filters out uncategorized transactions in SQL (t.category IS NOT
+        // NULL), so a category-less transaction never appears in the projected result set.
+        when(transactionRepository.sumAmountByCategoryGroupedForDateBetween(from, to)).thenReturn(List.of(
+                new CategorySpendingTotal(1L, "Groceries", new BigDecimal("-20.00"))
+        ));
 
         List<SpendingResponse> breakdown = spendingService.getSpendingBreakdown(from, to);
 
@@ -132,7 +124,7 @@ class SpendingServiceTest {
 
     @Test
     void getSpendingBreakdown_noTransactionsInRange_returnsEmptyList() {
-        when(transactionRepository.findByDateBetween(from, to)).thenReturn(List.of());
+        when(transactionRepository.sumAmountByCategoryGroupedForDateBetween(from, to)).thenReturn(List.of());
 
         List<SpendingResponse> breakdown = spendingService.getSpendingBreakdown(from, to);
 
@@ -144,6 +136,6 @@ class SpendingServiceTest {
         assertThatThrownBy(() -> spendingService.getSpendingBreakdown(to, from))
                 .isInstanceOf(InvalidDateRangeException.class);
 
-        verify(transactionRepository, never()).findByDateBetween(any(), any());
+        verify(transactionRepository, never()).sumAmountByCategoryGroupedForDateBetween(any(), any());
     }
 }

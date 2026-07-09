@@ -56,4 +56,14 @@ class TransactionImportControllerTest {
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.message").value("Unsupported file type for 'transactions.txt'"));
     }
+
+    @Test
+    void importTransactions_missingFilePart_returns400WithErrorBody() throws Exception {
+        mockMvc.perform(multipart("/api/v1/transactions/import"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("Required part 'file' is missing"))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
 }

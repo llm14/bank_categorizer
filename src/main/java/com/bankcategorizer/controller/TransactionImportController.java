@@ -25,6 +25,9 @@ public class TransactionImportController {
         this.transactionImportService = transactionImportService;
     }
 
+    // Intentionally returns 200 OK rather than 201 Created: this is a bulk import that
+    // yields a summary (ImportResultResponse with row counts), not a single created
+    // resource, so there's no natural single Location header target for a 201.
     @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ImportResultResponse> importTransactions(@RequestParam("file") MultipartFile file) {
         ImportResultResponse result = transactionImportService.importTransactions(file);

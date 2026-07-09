@@ -167,22 +167,28 @@ bank_categorizer/
 </tr>
 
 <tr>
-<td><code>GET /api/v1/transactions</code></td>
-<td>Lists transactions, optionally filtered to only uncategorized ones via <code>?category=uncategorized</code>.</td>
+<td><code>GET /api/v1/transactions?category={uncategorized}&page={n}&size={n}&sort={field,dir}</code></td>
+<td>Lists transactions page by page (defaults: page 0, size 20, sorted by date descending), optionally filtered to only uncategorized ones via <code>?category=uncategorized</code>.</td>
 <td>—</td>
 <td>
 
 ```json
-[
-  {
-    "id": 10,
-    "date": "2026-06-01",
-    "description": "MERCADONA MADRID",
-    "amount": -54.32,
-    "categoryId": 1,
-    "categoryName": "Groceries"
-  }
-]
+{
+  "content": [
+    {
+      "id": 10,
+      "date": "2026-06-01",
+      "description": "MERCADONA MADRID",
+      "amount": -54.32,
+      "categoryId": 1,
+      "categoryName": "Groceries"
+    }
+  ],
+  "page": 0,
+  "size": 20,
+  "totalElements": 42,
+  "totalPages": 3
+}
 ```
 
 </td>

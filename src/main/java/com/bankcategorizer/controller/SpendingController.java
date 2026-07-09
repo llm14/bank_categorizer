@@ -30,17 +30,21 @@ public class SpendingController {
         this.spendingComparisonService = spendingComparisonService;
     }
 
-    @GetMapping
-    public ResponseEntity<?> getSpending(
-            @RequestParam(required = false) Long category,
+    @GetMapping(params = "category")
+    public ResponseEntity<SpendingResponse> getSpendingForCategory(
+            @RequestParam Long category,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        if (category == null) {
-            List<SpendingResponse> breakdown = spendingService.getSpendingBreakdown(from, to);
-            return ResponseEntity.ok(breakdown);
-        }
         SpendingResponse response = spendingService.getSpendingForCategory(category, from, to);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping(params = "!category")
+    public ResponseEntity<List<SpendingResponse>> getSpendingBreakdown(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        List<SpendingResponse> breakdown = spendingService.getSpendingBreakdown(from, to);
+        return ResponseEntity.ok(breakdown);
     }
 
     @GetMapping("/compare")
