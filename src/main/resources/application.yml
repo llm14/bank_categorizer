@@ -3,6 +3,8 @@ spring:
     name: bank-categorizer
   profiles:
     active: dev
+  flyway:
+    baseline-on-migrate: true
 
 ---
 spring:
@@ -15,7 +17,7 @@ spring:
     password: ${DB_PASSWORD:postgres}
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: true
     properties:
       hibernate:
@@ -36,7 +38,7 @@ spring:
     password: ${DB_PASSWORD:postgres}
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: validate
     show-sql: true
 
 ---

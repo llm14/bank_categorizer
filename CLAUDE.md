@@ -14,7 +14,7 @@ A Spring Boot backend that ingests a user's bank statement (CSV/XLSX), auto-cate
 - Test (single class): `mvn test -Dtest=ClassName`
 - Test (single method): `mvn test -Dtest=ClassName#methodName`
 
-Requires a running PostgreSQL instance for the `dev`/`test` profiles (see `src/main/resources/application.yml` — connection defaults to `localhost:5432`, databases `bank_categorizer` / `bank_categorizer_test`, overridable via `DB_USERNAME`/`DB_PASSWORD`). There is no Flyway/Liquibase; schema is managed via `spring.jpa.hibernate.ddl-auto` (`update` in dev, `create-drop` in test, `validate` in prod).
+Requires a running PostgreSQL instance for the `dev`/`test` profiles (see `src/main/resources/application.yml` — connection defaults to `localhost:5432`, databases `bank_categorizer` / `bank_categorizer_test`, overridable via `DB_USERNAME`/`DB_PASSWORD`). Schema is managed entirely by Flyway (`src/main/resources/db/migration/`, starting with `V1__baseline_schema.sql`), which runs automatically on startup in every profile; `spring.jpa.hibernate.ddl-auto` is `validate` in `dev`, `test`, and `prod` alike — Hibernate only checks the entities match what Flyway created, it never creates or alters schema itself. `spring.flyway.baseline-on-migrate=true` is set so a pre-existing database created before Flyway was introduced (no `flyway_schema_history` table yet) gets baselined at version 1 instead of Flyway refusing to run. Future schema changes are made by adding new `V{n}__description.sql` migration files, not by editing entities and relying on `ddl-auto=update`.
 
 ## Architecture
 

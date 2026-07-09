@@ -68,6 +68,46 @@ As a user, I want to compare how much I spent in a category this period versus p
 
 ---
 
+## Stage 4 — Deployment readiness (planned)
+
+Scoped from the deployment-readiness findings tracked in `BACKLOG.md`. Target deployment shape: Docker.
+
+### US-7: Schema migrations via Flyway ✅
+As a developer, I want the database schema created and versioned via migrations instead of relying on Hibernate's `ddl-auto`, so that the app can actually start against a fresh production database.
+
+**Acceptance criteria:**
+- Flyway is added as a dependency, with a baseline migration matching the current entity model exactly.
+- The `prod` profile keeps `ddl-auto=validate` (schema is now provided by Flyway, not Hibernate); migrations run automatically on startup before the app accepts traffic.
+- A fresh, empty PostgreSQL database can start the app successfully end-to-end — this is the actual current blocker: `validate` mode never creates schema, so today a fresh prod database can't start the app at all.
+- Future schema changes are made via new migration files rather than depending on `ddl-auto=update`.
+
+### US-8: Containerize the app for Docker deployment 🔜
+As the person deploying this app, I want a Dockerfile and a docker-compose setup so that I can run the app and its database with a single, reproducible command instead of manual setup.
+
+**Acceptance criteria:**
+- A multi-stage `Dockerfile` builds the app with Maven and runs it on a JRE 25 base image.
+- A `docker-compose.yml` wires the app together with a PostgreSQL container, using environment variables (not hardcoded values) for credentials/connection details.
+- `docker compose up` brings up a working app reachable on its configured port, against a freshly-migrated database (depends on US-7).
+- `README.md` documents how to build and run the app via Docker.
+
+### US-9: Health check endpoint 🔜
+As the person operating this app (e.g. via a Docker healthcheck or a load balancer), I want a health endpoint so that I can tell whether the app and its database connection are actually up.
+
+**Acceptance criteria:**
+- `spring-boot-starter-actuator` is added as a dependency.
+- `/actuator/health` is exposed in the `prod` profile and reflects real database connectivity, not just JVM liveness.
+- The Docker setup from US-8 wires this endpoint into a container healthcheck.
+
+### US-10: Production-ready file uploads and deployment docs 🔜
+As a user uploading a real bank statement in a deployed environment, I want the app to accept realistically-sized files with a clear error when something's wrong, so my first real upload doesn't fail with a confusing generic error.
+
+**Acceptance criteria:**
+- `spring.servlet.multipart.max-file-size`/`max-request-size` are explicitly configured (e.g. 10–20MB) instead of relying on Spring Boot's 1MB/10MB defaults.
+- Exceeding the limit returns a clear 400/413 error via `GlobalExceptionHandler`, not a generic 500.
+- `README.md`'s configuration section is corrected (it currently references a nonexistent `application.properties` instead of `application.yml`) and documents the `prod` profile's required environment variables (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`), including `DB_URL`'s expected JDBC URL format.
+
+---
+
 ## Backlog / not yet scoped
 
 - Editing/deleting individual transactions.
