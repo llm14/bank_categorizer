@@ -8,6 +8,10 @@ spring:
   datasource:
     hikari:
       connection-timeout: 3000
+  servlet:
+    multipart:
+      max-file-size: 15MB
+      max-request-size: 15MB
 
 management:
   endpoints:

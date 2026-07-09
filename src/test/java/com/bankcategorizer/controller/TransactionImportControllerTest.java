@@ -9,6 +9,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.util.unit.DataSize;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -55,6 +57,22 @@ class TransactionImportControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.message").value("Unsupported file type for 'transactions.txt'"));
+    }
+
+    @Test
+    void importTransactions_fileExceedsMaxSize_returns413WithErrorBody() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "transactions.csv", "text/csv", "Date,Description,Amount\n2024-01-01,Test,10.00\n".getBytes());
+
+        given(transactionImportService.importTransactions(any()))
+                .willThrow(new MaxUploadSizeExceededException(DataSize.ofMegabytes(15).toBytes()));
+
+        mockMvc.perform(multipart("/api/v1/transactions/import").file(file))
+                .andExpect(status().isPayloadTooLarge())
+                .andExpect(jsonPath("$.status").value(413))
+                .andExpect(jsonPath("$.error").value("Payload Too Large"))
+                .andExpect(jsonPath("$.message").value("Uploaded file exceeds the maximum allowed size"))
+                .andExpect(jsonPath("$.timestamp").exists());
     }
 
     @Test
