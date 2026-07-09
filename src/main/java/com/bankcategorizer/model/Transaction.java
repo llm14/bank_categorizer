@@ -6,6 +6,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -23,7 +24,10 @@ import java.time.LocalDate;
  * A transaction may be uncategorized right after import, so its category is optional.
  */
 @Entity
-@Table(name = "transactions")
+@Table(name = "transactions", indexes = {
+        @Index(name = "idx_transactions_date", columnList = "date"),
+        @Index(name = "idx_transactions_category_id", columnList = "category_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor

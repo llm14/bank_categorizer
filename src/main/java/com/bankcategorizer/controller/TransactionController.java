@@ -1,10 +1,14 @@
 package com.bankcategorizer.controller;
 
+import com.bankcategorizer.dto.PageResponse;
 import com.bankcategorizer.dto.TransactionResponse;
 import com.bankcategorizer.dto.TransactionUpdateRequest;
 import com.bankcategorizer.exception.InvalidTransactionFilterException;
 import com.bankcategorizer.service.TransactionService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -13,8 +17,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 /**
  * Endpoints for listing transactions (optionally filtered to uncategorized ones) and
@@ -33,13 +35,14 @@ public class TransactionController {
     }
 
     @GetMapping
-    public ResponseEntity<List<TransactionResponse>> findAll(
-            @RequestParam(name = "category", required = false) String category) {
+    public ResponseEntity<PageResponse<TransactionResponse>> findAll(
+            @RequestParam(name = "category", required = false) String category,
+            @PageableDefault(size = 20, sort = "date", direction = Sort.Direction.DESC) Pageable pageable) {
         if (category == null) {
-            return ResponseEntity.ok(transactionService.findAll());
+            return ResponseEntity.ok(transactionService.findAll(pageable));
         }
         if (UNCATEGORIZED_FILTER.equalsIgnoreCase(category)) {
-            return ResponseEntity.ok(transactionService.findUncategorized());
+            return ResponseEntity.ok(transactionService.findUncategorized(pageable));
         }
         throw new InvalidTransactionFilterException(
                 "Unsupported category filter '%s'; only '%s' is supported".formatted(category, UNCATEGORIZED_FILTER));

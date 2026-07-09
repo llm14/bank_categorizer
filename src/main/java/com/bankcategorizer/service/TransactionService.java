@@ -1,5 +1,6 @@
 package com.bankcategorizer.service;
 
+import com.bankcategorizer.dto.PageResponse;
 import com.bankcategorizer.dto.TransactionResponse;
 import com.bankcategorizer.dto.TransactionUpdateRequest;
 import com.bankcategorizer.exception.ResourceNotFoundException;
@@ -9,6 +10,8 @@ import com.bankcategorizer.repository.CategoryRepository;
 import com.bankcategorizer.repository.TransactionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,17 +37,13 @@ public class TransactionService {
     }
 
     @Transactional(readOnly = true)
-    public List<TransactionResponse> findAll() {
-        return transactionRepository.findAll().stream()
-                .map(this::toResponse)
-                .toList();
+    public PageResponse<TransactionResponse> findAll(Pageable pageable) {
+        return toPageResponse(transactionRepository.findAll(pageable));
     }
 
     @Transactional(readOnly = true)
-    public List<TransactionResponse> findUncategorized() {
-        return transactionRepository.findByCategoryIsNull().stream()
-                .map(this::toResponse)
-                .toList();
+    public PageResponse<TransactionResponse> findUncategorized(Pageable pageable) {
+        return toPageResponse(transactionRepository.findByCategoryIsNull(pageable));
     }
 
     @Transactional
@@ -60,6 +59,13 @@ public class TransactionService {
         log.info("Transaction {} manually recategorized to category {} ('{}')",
                 transactionId, category.getId(), category.getName());
         return toResponse(saved);
+    }
+
+    private PageResponse<TransactionResponse> toPageResponse(Page<Transaction> page) {
+        List<TransactionResponse> content = page.getContent().stream()
+                .map(this::toResponse)
+                .toList();
+        return new PageResponse<>(content, page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages());
     }
 
     private TransactionResponse toResponse(Transaction transaction) {

@@ -1,5 +1,6 @@
 package com.bankcategorizer.service;
 
+import com.bankcategorizer.dto.PageResponse;
 import com.bankcategorizer.dto.TransactionResponse;
 import com.bankcategorizer.dto.TransactionUpdateRequest;
 import com.bankcategorizer.exception.ResourceNotFoundException;
@@ -12,6 +13,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -50,15 +54,21 @@ class TransactionServiceTest {
         Transaction uncategorized = Transaction.builder()
                 .id(2L).date(LocalDate.of(2024, 1, 2)).description("Unknown merchant")
                 .amount(new BigDecimal("5.00")).build();
-        when(transactionRepository.findAll()).thenReturn(List.of(categorized, uncategorized));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(transactionRepository.findAll(pageable))
+                .thenReturn(new PageImpl<>(List.of(categorized, uncategorized), pageable, 2));
 
-        List<TransactionResponse> responses = transactionService.findAll();
+        PageResponse<TransactionResponse> page = transactionService.findAll(pageable);
 
-        assertThat(responses).hasSize(2);
-        assertThat(responses.get(0).categoryId()).isEqualTo(1L);
-        assertThat(responses.get(0).categoryName()).isEqualTo("Groceries");
-        assertThat(responses.get(1).categoryId()).isNull();
-        assertThat(responses.get(1).categoryName()).isNull();
+        assertThat(page.content()).hasSize(2);
+        assertThat(page.page()).isEqualTo(0);
+        assertThat(page.size()).isEqualTo(20);
+        assertThat(page.totalElements()).isEqualTo(2);
+        assertThat(page.totalPages()).isEqualTo(1);
+        assertThat(page.content().get(0).categoryId()).isEqualTo(1L);
+        assertThat(page.content().get(0).categoryName()).isEqualTo("Groceries");
+        assertThat(page.content().get(1).categoryId()).isNull();
+        assertThat(page.content().get(1).categoryName()).isNull();
     }
 
     @Test
@@ -66,13 +76,16 @@ class TransactionServiceTest {
         Transaction uncategorized = Transaction.builder()
                 .id(2L).date(LocalDate.of(2024, 1, 2)).description("Unknown merchant")
                 .amount(new BigDecimal("5.00")).build();
-        when(transactionRepository.findByCategoryIsNull()).thenReturn(List.of(uncategorized));
+        Pageable pageable = PageRequest.of(0, 20);
+        when(transactionRepository.findByCategoryIsNull(pageable))
+                .thenReturn(new PageImpl<>(List.of(uncategorized), pageable, 1));
 
-        List<TransactionResponse> responses = transactionService.findUncategorized();
+        PageResponse<TransactionResponse> page = transactionService.findUncategorized(pageable);
 
-        assertThat(responses).hasSize(1);
-        assertThat(responses.get(0).id()).isEqualTo(2L);
-        assertThat(responses.get(0).categoryId()).isNull();
+        assertThat(page.content()).hasSize(1);
+        assertThat(page.content().get(0).id()).isEqualTo(2L);
+        assertThat(page.content().get(0).categoryId()).isNull();
+        assertThat(page.totalElements()).isEqualTo(1);
     }
 
     @Test

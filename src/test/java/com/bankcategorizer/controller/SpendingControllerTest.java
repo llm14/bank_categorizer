@@ -189,6 +189,23 @@ class SpendingControllerTest {
         mockMvc.perform(get("/api/v1/spending/compare")
                         .param("period", "month")
                         .param("lookback", "3"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("Required parameter 'category' is missing"))
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
+    void compareSpending_nonNumericCategory_returns400WithErrorBody() throws Exception {
+        mockMvc.perform(get("/api/v1/spending/compare")
+                        .param("category", "not-a-number")
+                        .param("period", "month")
+                        .param("lookback", "3"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").exists())
+                .andExpect(jsonPath("$.timestamp").exists());
     }
 }
