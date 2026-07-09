@@ -98,7 +98,7 @@ As the person operating this app (e.g. via a Docker healthcheck or a load balanc
 - `/actuator/health` is exposed in the `prod` profile and reflects real database connectivity, not just JVM liveness.
 - The Docker setup from US-8 wires this endpoint into a container healthcheck.
 
-### US-10: Production-ready file uploads and deployment docs 🔜
+### US-10: Production-ready file uploads and deployment docs ✅
 As a user uploading a real bank statement in a deployed environment, I want the app to accept realistically-sized files with a clear error when something's wrong, so my first real upload doesn't fail with a confusing generic error.
 
 **Acceptance criteria:**

@@ -33,13 +33,28 @@ cd bank_categorizer
 
 ### 2. Configure the database
 
-Create a PostgreSQL database and set the connection details in `src/main/resources/application.properties` (or via environment variables):
+Connection details are defined per Spring profile in `src/main/resources/application.yml`
+(active profile defaults to `dev`, overridable via `SPRING_PROFILES_ACTIVE`).
 
-```properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/bank_categorizer
-spring.datasource.username=<your-username>
-spring.datasource.password=<your-password>
+The `dev` and `test` profiles connect to a fixed local host/port/database-name pattern
+(`localhost:5432/bank_categorizer` and `localhost:5432/bank_categorizer_test`
+respectively) and default `DB_USERNAME`/`DB_PASSWORD` to `postgres`/`postgres` if not
+set — just create the corresponding local database(s) and, if your credentials
+differ from the defaults, set the environment variables:
+
+```bash
+export DB_USERNAME=<your-username>
+export DB_PASSWORD=<your-password>
 ```
+
+The `prod` profile has no defaults and requires all three of the following
+environment variables to be set:
+
+| Variable | Purpose | Example |
+|---|---|---|
+| `DB_URL` | Full JDBC URL (not just a host/port) | `jdbc:postgresql://host:5432/dbname` |
+| `DB_USERNAME` | Database user | `postgres` |
+| `DB_PASSWORD` | Database password | `postgres` |
 
 ### 3. Build the project
 
@@ -205,7 +220,7 @@ bank_categorizer/
 
 <tr>
 <td><code>POST /api/v1/transactions/import</code></td>
-<td>Uploads a CSV or XLSX bank statement, parses it into transactions, and auto-categorizes each row by matching keyword. Malformed rows are skipped rather than failing the whole import.</td>
+<td>Uploads a CSV or XLSX bank statement, parses it into transactions, and auto-categorizes each row by matching keyword. Malformed rows are skipped rather than failing the whole import. Uploads larger than 15MB are rejected with <code>413 Payload Too Large</code>.</td>
 <td>
 
 `multipart/form-data` with a `file` field (e.g. `transactions.csv`)
