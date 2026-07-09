@@ -98,10 +98,19 @@ This builds the app image, starts Postgres, waits for it to report healthy
 Flyway creates the schema on the fresh database and the app seeds its default
 categories automatically — no manual migration step needed.
 
+The app itself also has a container-level healthcheck, backed by
+`GET /actuator/health`: it returns `200`/`UP` when the database is reachable and
+`503`/`DOWN` (or times out) otherwise, which `docker compose ps` surfaces as
+`healthy`/`unhealthy`/`starting`. The runtime image has neither `curl` nor `wget`,
+so the check is a plain HTTP request over bash's `/dev/tcp` instead of an
+installed HTTP client. Give it a little time after startup (`start_period: 40s`)
+for the Spring context and Flyway migrations to finish before it can respond.
+
 The app is reachable at `http://localhost:8080` (or `$APP_PORT` if overridden), e.g.:
 
 ```bash
 curl http://localhost:8080/api/v1/categories
+curl http://localhost:8080/actuator/health
 ```
 
 Postgres data persists in a named volume (`db_data`) across `docker compose down`

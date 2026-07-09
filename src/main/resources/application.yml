@@ -5,6 +5,18 @@ spring:
     active: dev
   flyway:
     baseline-on-migrate: true
+  datasource:
+    hikari:
+      connection-timeout: 3000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
 
 ---
 spring:
