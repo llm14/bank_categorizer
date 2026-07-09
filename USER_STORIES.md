@@ -90,7 +90,7 @@ As the person deploying this app, I want a Dockerfile and a docker-compose setup
 - `docker compose up` brings up a working app reachable on its configured port, against a freshly-migrated database (depends on US-7).
 - `README.md` documents how to build and run the app via Docker.
 
-### US-9: Health check endpoint 🔜
+### US-9: Health check endpoint ✅
 As the person operating this app (e.g. via a Docker healthcheck or a load balancer), I want a health endpoint so that I can tell whether the app and its database connection are actually up.
 
 **Acceptance criteria:**

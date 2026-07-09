@@ -36,9 +36,28 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
       - "${APP_PORT:-8080}:8080"
-    # No container-level healthcheck yet: there is no /actuator/health
-    # endpoint in the app (see US-9). depends_on above already waits for
-    # Postgres to be genuinely ready before starting the app.
+    healthcheck:
+      # The runtime image (eclipse-temurin:25-jre) has neither curl nor wget,
+      # so we do a real HTTP round-trip via bash's /dev/tcp instead of
+      # installing an HTTP client just for this. This intentionally checks
+      # for an HTTP 200 status line - not just that the TCP port is open -
+      # because /actuator/health reports 503/DOWN when Postgres is
+      # unreachable even though the app itself (and its port) stays up; a
+      # bare TCP check would miss that entirely.
+      test:
+        - "CMD"
+        - "bash"
+        - "-c"
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/8080 &&
+          printf 'GET /actuator/health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -q 'HTTP/1.1 200' <&3
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      # Generous start_period: the app needs to boot the Spring context and
+      # run Flyway migrations before /actuator/health can respond at all.
+      start_period: 40s
 
 volumes:
   db_data:
