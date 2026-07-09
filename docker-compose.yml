@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-bank_categorizer}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      # Host-side port is overridable: this project already has an ad-hoc
+      # "bank-categorizer-db" container bound to host 5432 from local dev,
+      # so compose defaults to 5433 on the host. The container-internal
+      # port stays 5432 either way.
+      - "${DB_HOST_PORT:-5433}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-bank_categorizer}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      # Host is the compose service name "db", resolved via the Docker
+      # network - not localhost and not the host-side port mapping above.
+      DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-bank_categorizer}
+      DB_USERNAME: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    # No container-level healthcheck yet: there is no /actuator/health
+    # endpoint in the app (see US-9). depends_on above already waits for
+    # Postgres to be genuinely ready before starting the app.
+
+volumes:
+  db_data:

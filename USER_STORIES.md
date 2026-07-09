@@ -81,7 +81,7 @@ As a developer, I want the database schema created and versioned via migrations 
 - A fresh, empty PostgreSQL database can start the app successfully end-to-end — this is the actual current blocker: `validate` mode never creates schema, so today a fresh prod database can't start the app at all.
 - Future schema changes are made via new migration files rather than depending on `ddl-auto=update`.
 
-### US-8: Containerize the app for Docker deployment 🔜
+### US-8: Containerize the app for Docker deployment ✅
 As the person deploying this app, I want a Dockerfile and a docker-compose setup so that I can run the app and its database with a single, reproducible command instead of manual setup.
 
 **Acceptance criteria:**

@@ -61,6 +61,58 @@ The application will start on `http://localhost:8080` by default.
 mvn test
 ```
 
+## Running via Docker
+
+For a reproducible setup without installing a JDK or PostgreSQL locally, use the
+multi-stage `Dockerfile` and `docker-compose.yml` in the repo root. Compose brings
+up the app (built from source with Maven, run on a JRE 25 base image) together with
+a PostgreSQL 16 container, wired via environment variables — no credentials are
+hardcoded.
+
+### 1. Configure environment variables (optional)
+
+Sensible local-dev defaults are baked into `docker-compose.yml`, so this step can be
+skipped for local use. To override them, copy `.env.example` to `.env` (gitignored)
+and adjust as needed:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `POSTGRES_DB` | Database name | `bank_categorizer` |
+| `POSTGRES_USER` | Database user | `postgres` |
+| `POSTGRES_PASSWORD` | Database password | `postgres` |
+| `DB_HOST_PORT` | Host-side port mapped to Postgres' `5432` | `5433` (chosen because `5432` may already be taken by another local Postgres instance/container) |
+| `APP_PORT` | Host-side port mapped to the app's `8080` | `8080` |
+
+### 2. Build and run
+
+```bash
+docker compose up --build
+```
+
+This builds the app image, starts Postgres, waits for it to report healthy
+(`pg_isready`), then starts the app with `SPRING_PROFILES_ACTIVE=prod`. On startup
+Flyway creates the schema on the fresh database and the app seeds its default
+categories automatically — no manual migration step needed.
+
+The app is reachable at `http://localhost:8080` (or `$APP_PORT` if overridden), e.g.:
+
+```bash
+curl http://localhost:8080/api/v1/categories
+```
+
+Postgres data persists in a named volume (`db_data`) across `docker compose down`
+restarts; use `docker compose down -v` to also wipe the database.
+
+To stop everything:
+
+```bash
+docker compose down
+```
+
 ## Project Structure
 
 ```

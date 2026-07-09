@@ -38,3 +38,6 @@ Thumbs.db
 application-local.yml
 application-local.properties
 *.log
+
+### Docker ###
+.env
