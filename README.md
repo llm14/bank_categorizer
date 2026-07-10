@@ -413,7 +413,7 @@ bank_categorizer/
 - [x] Stage 2 — Categorization (auto-categorization by keyword, manual (re)categorization)
 - [x] Stage 3 — Spending questions (totals by category, period-over-period comparison)
 - [x] Stage 4 — Deployment readiness (Flyway migrations, Docker/docker-compose, health checks, production-ready file uploads)
-- [ ] Stage 5 — Frontend (React/TypeScript UI over the existing API)
+- [x] Stage 5 — Frontend (React/TypeScript UI over the existing API)
 
 See `USER_STORIES.md` for the detailed, acceptance-criteria-level spec behind each stage.
 

@@ -130,7 +130,7 @@ As a user, I want a working React app shell that can reach the backend so that t
 - A minimal screen calls `/actuator/health` on load and shows connected/disconnected status, proving the CORS setup from FE-1 actually works end-to-end from a browser.
 - `docker-compose.yml` gains a `frontend` service (built/served via Nginx) so `docker compose up` brings up frontend + backend + db together; `README.md` documents the new port.
 
-### FE-3: Upload a bank statement 🔜
+### FE-3: Upload a bank statement ✅
 As a user, I want to upload a CSV/XLSX statement from the browser so that I don't need Postman/curl to get my transactions in.
 
 **Acceptance criteria:**
@@ -138,7 +138,7 @@ As a user, I want to upload a CSV/XLSX statement from the browser so that I don'
 - On success, shows the import summary (imported/skipped/categorized/uncategorized counts) from `ImportResultResponse`.
 - Unsupported file type (400) and oversized file (413) errors are shown using the backend's actual `message`, not a generic failure string.
 
-### FE-4: Manage categories 🔜
+### FE-4: Manage categories ✅
 As a user, I want to create, view, and delete categories from the browser so that I don't need the API directly for category setup (mirrors US-2).
 
 **Acceptance criteria:**
@@ -146,7 +146,7 @@ As a user, I want to create, view, and delete categories from the browser so tha
 - A create-category form (name, description, keywords) posts to `POST /api/v1/categories`, showing field-level validation errors (400) and the duplicate-name case (409) inline.
 - Deleting a category asks for confirmation and communicates that its transactions become uncategorized rather than being deleted, matching actual backend behavior.
 
-### FE-5: Review and fix categorization 🔜
+### FE-5: Review and fix categorization ✅
 As a user, I want to see my transactions, filter to the uncategorized ones, and correct a category from the browser (mirrors US-3/US-4).
 
 **Acceptance criteria:**
@@ -154,7 +154,7 @@ As a user, I want to see my transactions, filter to the uncategorized ones, and 
 - A filter toggle switches to uncategorized-only (`?category=uncategorized`).
 - Each row has a category picker that calls `PATCH /api/v1/transactions/{id}`; the list reflects the change (via TanStack Query invalidation/refetch) without a full page reload.
 
-### FE-6: Spending totals dashboard 🔜
+### FE-6: Spending totals dashboard ✅
 As a user, I want to see how much I spent by category over a date range from the browser (mirrors US-5).
 
 **Acceptance criteria:**
@@ -162,7 +162,7 @@ As a user, I want to see how much I spent by category over a date range from the
 - A breakdown view shows total spent per category for the range (`GET /api/v1/spending`); selecting one category shows just its total.
 - Invalid ranges (400) and an unknown category (404) surface the backend's actual error message.
 
-### FE-7: Compare spending across periods 🔜
+### FE-7: Compare spending across periods ✅
 As a user, I want to compare a category's current-month spend against previous months from the browser (mirrors US-6).
 
 **Acceptance criteria:**
