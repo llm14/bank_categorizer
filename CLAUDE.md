@@ -8,11 +8,16 @@ A Spring Boot backend that ingests a user's bank statement (CSV/XLSX), auto-cate
 
 ## Commands
 
-- Build: `mvn clean install`
-- Run: `mvn spring-boot:run` (starts on `http://localhost:8080`, `dev` profile active by default)
-- Test (full suite): `mvn test`
-- Test (single class): `mvn test -Dtest=ClassName`
-- Test (single method): `mvn test -Dtest=ClassName#methodName`
+The project ships with the Maven Wrapper (`mvnw` / `mvnw.cmd`), pinned to a fixed
+Maven version via `.mvn/wrapper/maven-wrapper.properties` — use it instead of a
+globally installed `mvn` so the build isn't at the mercy of whatever Maven happens
+to be on the machine. On Windows use `mvnw.cmd` in place of `./mvnw`.
+
+- Build: `./mvnw clean install`
+- Run: `./mvnw spring-boot:run` (starts on `http://localhost:8080`, `dev` profile active by default)
+- Test (full suite): `./mvnw test`
+- Test (single class): `./mvnw test -Dtest=ClassName`
+- Test (single method): `./mvnw test -Dtest=ClassName#methodName`
 
 Requires a running PostgreSQL instance for the `dev`/`test` profiles (see `src/main/resources/application.yml` — connection defaults to `localhost:5432`, databases `bank_categorizer` / `bank_categorizer_test`, overridable via `DB_USERNAME`/`DB_PASSWORD`). Schema is managed entirely by Flyway (`src/main/resources/db/migration/`, starting with `V1__baseline_schema.sql`), which runs automatically on startup in every profile; `spring.jpa.hibernate.ddl-auto` is `validate` in `dev`, `test`, and `prod` alike — Hibernate only checks the entities match what Flyway created, it never creates or alters schema itself. `spring.flyway.baseline-on-migrate=true` is set so a pre-existing database created before Flyway was introduced (no `flyway_schema_history` table yet) gets baselined at version 1 instead of Flyway refusing to run. Future schema changes are made by adding new `V{n}__description.sql` migration files, not by editing entities and relying on `ddl-auto=update`.
 

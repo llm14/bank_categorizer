@@ -170,6 +170,15 @@ As a user, I want to compare a category's current-month spend against previous m
 - Renders the current period's total alongside each previous period and their average (`SpendingComparisonResponse`).
 - An out-of-range `lookback` or unsupported `period` shows the backend's actual 400 message rather than a generic error.
 
+### FE-8: Landing page with section navigation 🔜
+As a user, I want a simple landing page with the app name and a button per feature area so that I can jump straight to the section I need instead of scrolling through every screen stacked on one page.
+
+**Acceptance criteria:**
+- The app's default view is a landing page showing just the app name (plain text, no functional content) and four buttons: "Manage categories", "Review transactions", "Spending dashboard", "Spending comparison".
+- Clicking a button shows only that section's existing screen (`ManageCategories`/`ReviewTransactions`/`SpendingDashboard`/`SpendingComparison` from FE-4–FE-7); the landing page and the other three sections are hidden while one is active.
+- A way to get back to the landing page from within a section (e.g. a "Back"/"Home" control), so the user isn't stuck once a section is open.
+- Out of scope for this story: the upload-statement screen (FE-3) and the backend connectivity check (FE-2) aren't part of this button set — their current behavior/placement is left as-is unless a future story revisits it.
+
 ---
 
 ## Backlog / not yet scoped
