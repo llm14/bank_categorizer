@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.stream.Collectors;
 
@@ -28,6 +29,12 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    private final Clock clock;
+
+    public GlobalExceptionHandler(Clock clock) {
+        this.clock = clock;
+    }
 
     @ExceptionHandler(InvalidFileFormatException.class)
     public ResponseEntity<ErrorResponse> handleInvalidFileFormat(InvalidFileFormatException ex) {
@@ -140,7 +147,7 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ErrorResponse> buildResponse(HttpStatus status, String message) {
-        ErrorResponse body = new ErrorResponse(OffsetDateTime.now(), status.value(), status.getReasonPhrase(), message);
+        ErrorResponse body = new ErrorResponse(OffsetDateTime.now(clock), status.value(), status.getReasonPhrase(), message);
         return ResponseEntity.status(status).body(body);
     }
 }

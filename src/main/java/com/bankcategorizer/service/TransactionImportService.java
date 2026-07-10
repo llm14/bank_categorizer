@@ -18,6 +18,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -85,6 +86,7 @@ public class TransactionImportService {
         this.categorizationService = categorizationService;
     }
 
+    @Transactional
     public ImportResultResponse importTransactions(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new InvalidFileFormatException("Uploaded file is empty");

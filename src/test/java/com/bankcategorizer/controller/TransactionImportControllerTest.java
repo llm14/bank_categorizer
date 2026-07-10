@@ -1,11 +1,13 @@
 package com.bankcategorizer.controller;
 
+import com.bankcategorizer.config.ClockConfig;
 import com.bankcategorizer.dto.ImportResultResponse;
 import com.bankcategorizer.exception.InvalidFileFormatException;
 import com.bankcategorizer.service.TransactionImportService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -21,6 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(TransactionImportController.class)
+@Import(ClockConfig.class)
 class TransactionImportControllerTest {
 
     @Autowired

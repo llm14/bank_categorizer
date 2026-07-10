@@ -3,6 +3,7 @@ package com.bankcategorizer.repository;
 import com.bankcategorizer.model.Transaction;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -14,6 +15,21 @@ import java.util.List;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
 
+    /**
+     * Overrides {@link JpaRepository#findAll(Pageable)} to eagerly fetch {@code category} in
+     * the same query, avoiding a per-row lazy-load N+1 when the paged listing is mapped to
+     * {@code TransactionResponse}.
+     */
+    @Override
+    @EntityGraph(attributePaths = "category")
+    Page<Transaction> findAll(Pageable pageable);
+
+    /**
+     * Fetches {@code category} eagerly for the same reason as {@link #findAll(Pageable)} above,
+     * even though matching rows here always have a {@code null} category — kept consistent so
+     * both paged listing paths behave the same way.
+     */
+    @EntityGraph(attributePaths = "category")
     Page<Transaction> findByCategoryIsNull(Pageable pageable);
 
     /**

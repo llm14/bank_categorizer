@@ -1,5 +1,6 @@
 package com.bankcategorizer.controller;
 
+import com.bankcategorizer.config.ClockConfig;
 import com.bankcategorizer.dto.CategoryResponse;
 import com.bankcategorizer.exception.DuplicateCategoryException;
 import com.bankcategorizer.exception.ResourceNotFoundException;
@@ -8,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -26,6 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(CategoryController.class)
+@Import(ClockConfig.class)
 class CategoryControllerTest {
 
     @Autowired

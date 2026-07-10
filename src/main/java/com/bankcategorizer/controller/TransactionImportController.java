@@ -11,9 +11,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * Endpoint for uploading a bank transaction export (CSV or XLSX) for parsing and
- * persistence. Imported transactions are stored without a category; categorization
- * happens in a later step.
+ * Endpoint for uploading a bank transaction export (CSV or XLSX) for parsing,
+ * auto-categorization, and persistence. Each row is matched against existing
+ * category keywords before being saved; unmatched rows are persisted uncategorized.
  */
 @RestController
 @RequestMapping("/api/v1/transactions")

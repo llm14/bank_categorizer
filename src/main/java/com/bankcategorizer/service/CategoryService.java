@@ -36,6 +36,7 @@ public class CategoryService {
         this.transactionRepository = transactionRepository;
     }
 
+    @Transactional
     public CategoryResponse create(CategoryCreateRequest request) {
         if (categoryRepository.existsByNameIgnoreCase(request.name())) {
             throw new DuplicateCategoryException(
