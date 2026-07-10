@@ -86,11 +86,11 @@ mvn test
 
 ## Running via Docker
 
-For a reproducible setup without installing a JDK or PostgreSQL locally, use the
-multi-stage `Dockerfile` and `docker-compose.yml` in the repo root. Compose brings
-up the app (built from source with Maven, run on a JRE 25 base image) together with
-a PostgreSQL 16 container, wired via environment variables — no credentials are
-hardcoded.
+For a reproducible setup without installing a JDK, Node, or PostgreSQL locally, use
+the multi-stage `Dockerfile`s and `docker-compose.yml` in the repo root. Compose
+brings up the app (built from source with Maven, run on a JRE 25 base image), the
+frontend (built with Node, served by Nginx), and a PostgreSQL 16 container, wired
+via environment variables — no credentials are hardcoded.
 
 ### 1. Configure environment variables (optional)
 
@@ -109,6 +109,8 @@ cp .env.example .env
 | `POSTGRES_PASSWORD` | Database password | `postgres` |
 | `DB_HOST_PORT` | Host-side port mapped to Postgres' `5432` | `5433` (chosen because `5432` may already be taken by another local Postgres instance/container) |
 | `APP_PORT` | Host-side port mapped to the app's `8080` | `8080` |
+| `FRONTEND_PORT` | Host-side port mapped to the frontend's Nginx `80` | `3000` |
+| `FRONTEND_ORIGIN` | Origin the app allows CORS requests from — must match wherever the frontend is actually reachable | `http://localhost:${FRONTEND_PORT:-3000}` |
 
 ### 2. Build and run
 
@@ -116,10 +118,11 @@ cp .env.example .env
 docker compose up --build
 ```
 
-This builds the app image, starts Postgres, waits for it to report healthy
-(`pg_isready`), then starts the app with `SPRING_PROFILES_ACTIVE=prod`. On startup
-Flyway creates the schema on the fresh database and the app seeds its default
-categories automatically — no manual migration step needed.
+This builds the app and frontend images, starts Postgres, waits for it to report
+healthy (`pg_isready`), then starts the app with `SPRING_PROFILES_ACTIVE=prod`, and
+finally starts the frontend once the app itself reports healthy. On startup Flyway
+creates the schema on the fresh database and the app seeds its default categories
+automatically — no manual migration step needed.
 
 The app itself also has a container-level healthcheck, backed by
 `GET /actuator/health`: it returns `200`/`UP` when the database is reachable and
@@ -136,6 +139,13 @@ curl http://localhost:8080/api/v1/categories
 curl http://localhost:8080/actuator/health
 ```
 
+The frontend (an Nginx-served static build of `frontend/`) is reachable at
+`http://localhost:3000` (or `$FRONTEND_PORT` if overridden) once `docker compose up`
+reports it healthy — the Vite build bakes in `VITE_API_BASE_URL` as
+`http://localhost:$APP_PORT` at *build* time (not runtime), since the browser calls
+the backend directly rather than through the Docker network, so rebuild the
+`frontend` image (`docker compose up --build frontend`) if you change `APP_PORT`.
+
 Postgres data persists in a named volume (`db_data`) across `docker compose down`
 restarts; use `docker compose down -v` to also wipe the database.
 
@@ -144,6 +154,44 @@ To stop everything:
 ```bash
 docker compose down
 ```
+
+## Frontend (development)
+
+A React + TypeScript SPA (Vite, Tailwind CSS, TanStack Query) lives under `frontend/`
+and gives the API above a browser UI (see `USER_STORIES.md`'s "Stage 5 — Frontend").
+It's a separate app from the Java backend, run independently in development:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The dev server runs on `http://localhost:5173` by default (Vite's default port) — the
+backend's CORS config (`FRONTEND_ORIGIN`, see above) already allows this origin by
+default in the `dev`/`test` profiles, so no backend changes are needed to develop
+against it locally.
+
+The frontend talks to the backend via the `VITE_API_BASE_URL` env var (never
+hardcoded), defaulting to `http://localhost:8080`. Copy `frontend/.env.example` to
+`frontend/.env` (gitignored) to override it:
+
+```bash
+cp frontend/.env.example frontend/.env
+```
+
+Other useful commands (run from `frontend/`):
+
+```bash
+npm run build      # type-checks and produces a production build in frontend/dist
+npm test           # runs the Vitest + React Testing Library suite
+npm run lint       # ESLint
+npm run typecheck  # tsc, no emit
+```
+
+For a containerized, production-like build instead of `npm run dev`, see the
+"Running via Docker" section above — `docker compose up --build` also builds and
+serves `frontend/` via Nginx as its own `frontend` service.
 
 ## Project Structure
 

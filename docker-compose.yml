@@ -34,6 +34,12 @@ services:
       DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-bank_categorizer}
       DB_USERNAME: ${POSTGRES_USER:-postgres}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      # CORS-allowed origin for the frontend. The `prod` profile has no
+      # default (unlike dev/test), so this must be set here or Spring Boot
+      # fails to start on an unresolved placeholder. Defaults to the
+      # frontend's own host-mapped port below, since that's the origin a
+      # browser actually loads the SPA from.
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:${FRONTEND_PORT:-3000}}
     ports:
       - "${APP_PORT:-8080}:8080"
     healthcheck:
@@ -58,6 +64,27 @@ services:
       # Generous start_period: the app needs to boot the Spring context and
       # run Flyway migrations before /actuator/health can respond at all.
       start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Vite bakes this into the static build at BUILD time - it must be
+        # the address the user's BROWSER can reach directly (the backend's
+        # host-mapped port), not the internal Docker service name "app",
+        # since the browser never joins the compose network.
+        VITE_API_BASE_URL: http://localhost:${APP_PORT:-8080}
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:80/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
   db_data:
