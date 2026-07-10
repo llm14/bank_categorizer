@@ -170,7 +170,7 @@ As a user, I want to compare a category's current-month spend against previous m
 - Renders the current period's total alongside each previous period and their average (`SpendingComparisonResponse`).
 - An out-of-range `lookback` or unsupported `period` shows the backend's actual 400 message rather than a generic error.
 
-### FE-8: Landing page with section navigation 🔜
+### FE-8: Landing page with section navigation ✅
 As a user, I want a simple landing page with the app name and a button per feature area so that I can jump straight to the section I need instead of scrolling through every screen stacked on one page.
 
 **Acceptance criteria:**
