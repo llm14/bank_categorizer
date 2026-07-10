@@ -352,12 +352,13 @@ bank_categorizer/
 
 ## Roadmap
 
-- [ ] Set up Spring Boot project skeleton
-- [ ] Define transaction and category data models
-- [ ] Implement CSV/XLSX file upload and parsing
-- [ ] Implement transaction categorization logic
-- [ ] Implement spending query/comparison endpoints
-- [ ] Add tests
+- [x] Stage 1 — Import bank statements (CSV/XLSX upload and parsing)
+- [x] Stage 2 — Categorization (auto-categorization by keyword, manual (re)categorization)
+- [x] Stage 3 — Spending questions (totals by category, period-over-period comparison)
+- [x] Stage 4 — Deployment readiness (Flyway migrations, Docker/docker-compose, health checks, production-ready file uploads)
+- [ ] Stage 5 — Frontend (React/TypeScript UI over the existing API)
+
+See `USER_STORIES.md` for the detailed, acceptance-criteria-level spec behind each stage.
 
 ## License
 
