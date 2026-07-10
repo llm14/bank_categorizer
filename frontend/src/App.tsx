@@ -3,6 +3,7 @@ import { HealthStatus } from "./components/HealthStatus";
 import { UploadStatement } from "./components/UploadStatement";
 import { ManageCategories } from "./components/ManageCategories";
 import { ReviewTransactions } from "./components/ReviewTransactions";
+import { SpendingDashboard } from "./components/SpendingDashboard";
 
 const queryClient = new QueryClient();
 
@@ -14,6 +15,7 @@ function App() {
         <UploadStatement />
         <ManageCategories />
         <ReviewTransactions />
+        <SpendingDashboard />
       </div>
     </QueryClientProvider>
   );
