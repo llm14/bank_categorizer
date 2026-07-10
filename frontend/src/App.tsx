@@ -4,6 +4,7 @@ import { UploadStatement } from "./components/UploadStatement";
 import { ManageCategories } from "./components/ManageCategories";
 import { ReviewTransactions } from "./components/ReviewTransactions";
 import { SpendingDashboard } from "./components/SpendingDashboard";
+import { SpendingComparison } from "./components/SpendingComparison";
 
 const queryClient = new QueryClient();
 
@@ -16,6 +17,7 @@ function App() {
         <ManageCategories />
         <ReviewTransactions />
         <SpendingDashboard />
+        <SpendingComparison />
       </div>
     </QueryClientProvider>
   );
