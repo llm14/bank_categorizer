@@ -47,7 +47,14 @@ export DB_USERNAME=<your-username>
 export DB_PASSWORD=<your-password>
 ```
 
-The `prod` profile has no defaults and requires all three of the following
+`dev` and `test` also default the CORS-allowed frontend origin to the Vite dev
+server's default origin if `FRONTEND_ORIGIN` isn't set:
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `FRONTEND_ORIGIN` | Origin allowed to make cross-origin requests to `/api/v1/**` and `/actuator/health` | `http://localhost:5173` |
+
+The `prod` profile has no defaults and requires all of the following
 environment variables to be set:
 
 | Variable | Purpose | Example |
@@ -55,6 +62,7 @@ environment variables to be set:
 | `DB_URL` | Full JDBC URL (not just a host/port) | `jdbc:postgresql://host:5432/dbname` |
 | `DB_USERNAME` | Database user | `postgres` |
 | `DB_PASSWORD` | Database password | `postgres` |
+| `FRONTEND_ORIGIN` | Origin allowed to make cross-origin requests to `/api/v1/**` and `/actuator/health` | `https://app.example.com` |
 
 ### 3. Build the project
 

@@ -23,6 +23,8 @@ management:
     web:
       exposure:
         include: health
+      cors:
+        allowed-origins: ${app.cors.allowed-origin}
   endpoint:
     health:
       show-details: always
@@ -44,6 +46,10 @@ spring:
       hibernate:
         format_sql: true
 
+app:
+  cors:
+    allowed-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+
 logging:
   level:
     com.bankcategorizer: DEBUG
@@ -62,6 +68,10 @@ spring:
       ddl-auto: validate
     show-sql: true
 
+app:
+  cors:
+    allowed-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+
 ---
 spring:
   config:
@@ -75,6 +85,10 @@ spring:
     hibernate:
       ddl-auto: validate
     show-sql: false
+
+app:
+  cors:
+    allowed-origin: ${FRONTEND_ORIGIN}
 
 logging:
   level:
