@@ -108,6 +108,70 @@ As a user uploading a real bank statement in a deployed environment, I want the 
 
 ---
 
+## Stage 5 — Frontend (planned)
+
+A React/TypeScript/Vite single-page app (`frontend/`) giving the existing REST API a browser UI: upload statements, manage categories, review/fix categorization, and answer spending questions, instead of driving everything via Postman/curl. Styled with Tailwind CSS, server state managed with TanStack Query. See the `react-frontend-expert` agent for the chosen stack's conventions.
+
+### FE-1: Enable CORS for the frontend origin 🔜
+As a developer, I want the backend to accept cross-origin requests from the frontend so that a browser-based UI can actually call the API — promotes the CORS gap tracked in `BACKLOG.md` since it's no longer hypothetical once a frontend exists.
+
+**Acceptance criteria:**
+- CORS is configured (e.g. a `WebMvcConfigurer` bean) allowing the frontend's origin(s); the allowed origin(s) come from an env-var-driven config (dev default: the Vite dev server's origin; prod: configurable via env var), not hardcoded or wildcarded.
+- Only the endpoints under `/api/v1/**` (and `/actuator/health`, needed by FE-2's connectivity check) allow cross-origin requests.
+- Existing API behavior and tests are unaffected — this only adds cross-origin headers/preflight handling.
+
+### FE-2: Frontend scaffolding & backend connectivity 🔜
+As a user, I want a working React app shell that can reach the backend so that the feature screens below (FE-3 through FE-7) have a real foundation to build on.
+
+**Acceptance criteria:**
+- `frontend/` scaffolded with Vite + React + TypeScript + Tailwind CSS.
+- A typed API client (base URL from `VITE_API_BASE_URL`, not hardcoded) with typed request/response models matching the backend's DTOs (`CategoryResponse`, `TransactionResponse`, `PageResponse<T>`, `SpendingResponse`, `SpendingComparisonResponse`, `ErrorResponse`).
+- TanStack Query's provider is wired at the app root for server-state fetching/caching.
+- A minimal screen calls `/actuator/health` on load and shows connected/disconnected status, proving the CORS setup from FE-1 actually works end-to-end from a browser.
+- `docker-compose.yml` gains a `frontend` service (built/served via Nginx) so `docker compose up` brings up frontend + backend + db together; `README.md` documents the new port.
+
+### FE-3: Upload a bank statement 🔜
+As a user, I want to upload a CSV/XLSX statement from the browser so that I don't need Postman/curl to get my transactions in.
+
+**Acceptance criteria:**
+- An upload screen (file picker) posts to `POST /api/v1/transactions/import`.
+- On success, shows the import summary (imported/skipped/categorized/uncategorized counts) from `ImportResultResponse`.
+- Unsupported file type (400) and oversized file (413) errors are shown using the backend's actual `message`, not a generic failure string.
+
+### FE-4: Manage categories 🔜
+As a user, I want to create, view, and delete categories from the browser so that I don't need the API directly for category setup (mirrors US-2).
+
+**Acceptance criteria:**
+- A categories screen lists all categories (`GET /api/v1/categories`), including keywords.
+- A create-category form (name, description, keywords) posts to `POST /api/v1/categories`, showing field-level validation errors (400) and the duplicate-name case (409) inline.
+- Deleting a category asks for confirmation and communicates that its transactions become uncategorized rather than being deleted, matching actual backend behavior.
+
+### FE-5: Review and fix categorization 🔜
+As a user, I want to see my transactions, filter to the uncategorized ones, and correct a category from the browser (mirrors US-3/US-4).
+
+**Acceptance criteria:**
+- A paginated, sortable transaction table (`GET /api/v1/transactions`) shows date, description, signed amount, and category (or "Uncategorized").
+- A filter toggle switches to uncategorized-only (`?category=uncategorized`).
+- Each row has a category picker that calls `PATCH /api/v1/transactions/{id}`; the list reflects the change (via TanStack Query invalidation/refetch) without a full page reload.
+
+### FE-6: Spending totals dashboard 🔜
+As a user, I want to see how much I spent by category over a date range from the browser (mirrors US-5).
+
+**Acceptance criteria:**
+- A date range picker (from/to) drives both views below.
+- A breakdown view shows total spent per category for the range (`GET /api/v1/spending`); selecting one category shows just its total.
+- Invalid ranges (400) and an unknown category (404) surface the backend's actual error message.
+
+### FE-7: Compare spending across periods 🔜
+As a user, I want to compare a category's current-month spend against previous months from the browser (mirrors US-6).
+
+**Acceptance criteria:**
+- A category selector plus a `lookback` input (bounded 1–24, matching the backend's cap) calls `GET /api/v1/spending/compare`.
+- Renders the current period's total alongside each previous period and their average (`SpendingComparisonResponse`).
+- An out-of-range `lookback` or unsupported `period` shows the backend's actual 400 message rather than a generic error.
+
+---
+
 ## Backlog / not yet scoped
 
 - Editing/deleting individual transactions.
