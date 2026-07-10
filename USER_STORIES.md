@@ -112,7 +112,7 @@ As a user uploading a real bank statement in a deployed environment, I want the 
 
 A React/TypeScript/Vite single-page app (`frontend/`) giving the existing REST API a browser UI: upload statements, manage categories, review/fix categorization, and answer spending questions, instead of driving everything via Postman/curl. Styled with Tailwind CSS, server state managed with TanStack Query. See the `react-frontend-expert` agent for the chosen stack's conventions.
 
-### FE-1: Enable CORS for the frontend origin 🔜
+### FE-1: Enable CORS for the frontend origin ✅
 As a developer, I want the backend to accept cross-origin requests from the frontend so that a browser-based UI can actually call the API — promotes the CORS gap tracked in `BACKLOG.md` since it's no longer hypothetical once a frontend exists.
 
 **Acceptance criteria:**
@@ -120,7 +120,7 @@ As a developer, I want the backend to accept cross-origin requests from the fron
 - Only the endpoints under `/api/v1/**` (and `/actuator/health`, needed by FE-2's connectivity check) allow cross-origin requests.
 - Existing API behavior and tests are unaffected — this only adds cross-origin headers/preflight handling.
 
-### FE-2: Frontend scaffolding & backend connectivity 🔜
+### FE-2: Frontend scaffolding & backend connectivity ✅
 As a user, I want a working React app shell that can reach the backend so that the feature screens below (FE-3 through FE-7) have a real foundation to build on.
 
 **Acceptance criteria:**
