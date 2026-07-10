@@ -1,0 +1,24 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+
+# Env files (real values, not the checked-in .env.example)
+.env
+.env.local
+
+# Editor
+*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test/coverage
+coverage
+
+# TypeScript incremental build cache
+*.tsbuildinfo
