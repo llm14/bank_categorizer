@@ -21,6 +21,7 @@ A backend application that ingests a user's bank account movement list (CSV or E
 - JDK 25+
 - Maven 3.9+
 - PostgreSQL 16+ (running locally or via Docker)
+- Node.js LTS + npm (only needed for `frontend/` — see "Frontend (development)" below)
 
 ## Getting Started
 
