@@ -8,6 +8,11 @@ spring:
   datasource:
     hikari:
       connection-timeout: 3000
+  jpa:
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 20
   servlet:
     multipart:
       max-file-size: 15MB

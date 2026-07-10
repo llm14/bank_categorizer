@@ -32,6 +32,7 @@ public class SpendingComparisonService {
 
     private static final String MONTH_PERIOD = "month";
     private static final int AVERAGE_SCALE = 2;
+    private static final int MAX_LOOKBACK = 24;
 
     private final Clock clock;
     private final CategoryRepository categoryRepository;
@@ -99,6 +100,10 @@ public class SpendingComparisonService {
         if (lookback == null || lookback < 1) {
             throw new InvalidSpendingComparisonRequestException(
                     "'lookback' must be a positive integer");
+        }
+        if (lookback > MAX_LOOKBACK) {
+            throw new InvalidSpendingComparisonRequestException(
+                    "'lookback' must not exceed %d months".formatted(MAX_LOOKBACK));
         }
     }
 }

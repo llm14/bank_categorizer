@@ -1,5 +1,6 @@
 package com.bankcategorizer.controller;
 
+import com.bankcategorizer.config.ClockConfig;
 import com.bankcategorizer.dto.PageResponse;
 import com.bankcategorizer.dto.TransactionResponse;
 import com.bankcategorizer.exception.ResourceNotFoundException;
@@ -8,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -29,6 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(TransactionController.class)
+@Import(ClockConfig.class)
 class TransactionControllerTest {
 
     @Autowired

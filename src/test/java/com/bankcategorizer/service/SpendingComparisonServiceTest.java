@@ -156,6 +156,14 @@ class SpendingComparisonServiceTest {
                 .isInstanceOf(InvalidSpendingComparisonRequestException.class);
     }
 
+    @Test
+    void compare_lookbackExceedsMaximum_throwsInvalidSpendingComparisonRequestException() {
+        assertThatThrownBy(() -> spendingComparisonService.compare(1L, "month", 240))
+                .isInstanceOf(InvalidSpendingComparisonRequestException.class);
+
+        verify(categoryRepository, never()).findById(any());
+    }
+
     private void mockSpending(LocalDate from, LocalDate to, String totalSpent) {
         when(spendingService.getSpendingForCategory(eq(1L), eq(from), eq(to)))
                 .thenReturn(new SpendingResponse(1L, "Groceries", from, to, new BigDecimal(totalSpent)));
