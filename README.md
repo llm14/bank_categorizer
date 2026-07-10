@@ -19,9 +19,13 @@ A backend application that ingests a user's bank account movement list (CSV or E
 ## Prerequisites
 
 - JDK 25+
-- Maven 3.9+
 - PostgreSQL 16+ (running locally or via Docker)
 - Node.js LTS + npm (only needed for `frontend/` — see "Frontend (development)" below)
+
+No local Maven install is required — the repo includes the Maven Wrapper (`mvnw` /
+`mvnw.cmd`), which downloads and uses the pinned Maven version (see
+`.mvn/wrapper/maven-wrapper.properties`) automatically on first run. This does need
+network access the first time, to download that Maven distribution.
 
 ## Getting Started
 
@@ -68,22 +72,32 @@ environment variables to be set:
 ### 3. Build the project
 
 ```bash
-mvn clean install
+./mvnw clean install
+```
+
+On Windows (Command Prompt / PowerShell), use `mvnw.cmd` instead:
+
+```bash
+mvnw.cmd clean install
 ```
 
 ### 4. Run the application
 
 ```bash
-mvn spring-boot:run
+./mvnw spring-boot:run
 ```
+
+(`mvnw.cmd spring-boot:run` on Windows.)
 
 The application will start on `http://localhost:8080` by default.
 
 ## Running Tests
 
 ```bash
-mvn test
+./mvnw test
 ```
+
+(`mvnw.cmd test` on Windows.)
 
 ## Running via Docker
 
