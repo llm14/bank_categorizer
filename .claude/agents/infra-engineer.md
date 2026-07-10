@@ -31,6 +31,7 @@ You are a senior infrastructure/DevOps engineer working on the bank_categorizer 
 - Check for host port conflicts with anything already running (`docker ps`) before assuming a mapping is free — this project has ad-hoc containers from local dev sessions; report a conflict rather than silently picking a different port or stopping someone else's container.
 
 **Verification — always actually run it, don't just write it and assume:**
+- Check Docker Desktop is actually up first: `docker info` — if it fails, start it (`Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe"` via PowerShell) and poll until ready before touching `docker compose`.
 - Infra config is exactly the kind of thing that looks correct and fails at runtime (env var name mismatches, compose network/service-name resolution, port conflicts, a healthcheck that never goes healthy). After writing or changing a Dockerfile/compose file, actually build and run it (`docker compose up --build`), wait for it to report healthy, and hit the app through the mapped port to confirm it's genuinely working end-to-end — not just that `docker compose up` exits 0.
 - Clean up what you started (`docker compose down`) once verified, unless asked to leave it running.
 

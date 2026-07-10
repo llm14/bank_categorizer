@@ -105,7 +105,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "transactions", "import"]
             },
-            "description": "Uploads a CSV or XLSX bank statement. Rows are parsed into transactions and auto-categorized by matching each description against existing category keywords; malformed rows are skipped rather than failing the import. Try it with samples/transactions_basic.csv or samples/transactions_aliases.xlsx from the repo root.\n\nRemember to click the 'file' field's value and select a file before sending — Postman can't pre-fill a local file path from a shared collection."
+            "description": "Uploads a CSV or XLSX bank statement. Rows are parsed into transactions and auto-categorized by matching each description against existing category keywords; malformed rows are skipped rather than failing the import. Try it with samples/transactions_basic.csv or samples/transactions_aliases.xlsx from the repo root. Files over 15MB are rejected with 413.\n\nRemember to click the 'file' field's value and select a file before sending — Postman can't pre-fill a local file path from a shared collection."
           },
           "response": []
         },
@@ -224,7 +224,7 @@
                 { "key": "lookback", "value": "{{lookback}}" }
               ]
             },
-            "description": "Compares category `categoryId`'s spending in the current calendar month against each of the previous `lookback` months, plus their average. Only `period=month` is currently supported; anything else returns 400."
+            "description": "Compares category `categoryId`'s spending in the current calendar month against each of the previous `lookback` months, plus their average. Only `period=month` is currently supported; anything else returns 400. `lookback` must be a positive integer no greater than 24; out-of-range values also return 400."
           },
           "response": []
         }
