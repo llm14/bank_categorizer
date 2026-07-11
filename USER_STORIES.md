@@ -106,6 +106,41 @@ As a user uploading a real bank statement in a deployed environment, I want the 
 - Exceeding the limit returns a clear 400/413 error via `GlobalExceptionHandler`, not a generic 500.
 - `README.md`'s configuration section is corrected (it currently references a nonexistent `application.properties` instead of `application.yml`) and documents the `prod` profile's required environment variables (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`), including `DB_URL`'s expected JDBC URL format.
 
+### US-11: Manually add a transaction 🔜
+As a user, I want to manually add a single transaction (not just via CSV/XLSX import) so that I can record something a statement never included, like a cash payment. This is the backend endpoint FE-9 (Stage 5) builds a form against.
+
+**Acceptance criteria:**
+- `POST /api/v1/transactions` accepts a date, description, and signed amount, creates a single transaction, and runs it through the same auto-categorization (`CategorizationService`) as an imported row before saving — consistent with import's behavior rather than a separate uncategorized-by-default path.
+- Required-field validation (400 on a missing/invalid date, description, or amount) follows this project's existing Bean Validation + `GlobalExceptionHandler` convention.
+- The created transaction follows the same signed-amount convention as everything else (expenses negative, income positive) — no special-case sign handling for manually-added rows.
+
+### US-12: Period and comparison totals across all categories 🔜
+As a user, I want a total spent across *all* categories for whatever period I'm looking at, not just a per-category breakdown, so I get the "how much did I spend, full stop" answer without adding up the list myself. This is the backend counterpart FE-10 (Stage 5) surfaces in the Spending dashboard and Spending comparison screens.
+
+**Acceptance criteria:**
+- `GET /api/v1/spending` (category omitted, breakdown mode) also returns a total spent across every category included in that date range, alongside the existing per-category breakdown — computed once server-side rather than left for callers to sum themselves, consistent with this codebase's existing single-source-of-truth convention for aggregation (e.g. `SpendingComparisonService` delegating to `SpendingService`).
+- `GET /api/v1/spending/compare`'s `category` param becomes optional (currently required): when omitted, it compares total spending across *all* categories for the current period against each of the previous `lookback` periods and their average, reusing the existing response shape (categoryId/categoryName null or omitted for an all-categories comparison).
+- Existing single-category behavior for both endpoints is unchanged — this only adds the all-categories total as an option, not a replacement.
+- Covered by tests the same way existing spending endpoints are (Mockito service tests + MockMvc slice tests), and the Postman collection is updated to document the new/changed response shapes.
+
+### US-13: User login 🔜
+As a user, I want to log in before I can use the app so that my transactions and categories aren't reachable by anyone who can hit the API — this ends the app's current fully-open, no-auth state now that it has a real browser UI (previously tracked as "Authentication" in `BACKLOG.md`). This is the backend counterpart FE-11 (Stage 5) builds a login screen against.
+
+**Acceptance criteria:**
+- A single set of login credentials (username/password), configured via environment variables (matching this project's existing env-var-driven convention — no hardcoded default in `prod`, a dev-only default is fine) — this remains a single-user app, not multi-account/multi-tenant.
+- A login endpoint issues a session (or token) on valid credentials; every existing `/api/v1/**` endpoint requires it, returning 401 for missing/invalid auth rather than serving data openly. `/actuator/health` stays reachable without auth (needed for container healthchecks).
+- The existing CORS config (FE-1) is updated as needed for whichever mechanism is chosen (e.g. `allowCredentials` for a session cookie), still scoped to the configured `FRONTEND_ORIGIN`, never wildcarded.
+- Covered by tests the same way existing endpoints are (slice/integration tests asserting 401 without auth and 200 with valid auth), and the Postman collection/README document how to authenticate a request.
+
+### US-14: Detect already-imported transactions on re-upload 🔜
+As a user, I want re-uploading a bank export that overlaps with a previous upload (e.g. downloading a fresh monthly CSV that includes some of last month's dates) to skip transactions already in the app, rather than creating duplicates or resetting their category, so I don't have to manually check dates before every upload.
+
+**Acceptance criteria:**
+- A transaction is considered a duplicate of an existing one when the parsed date, description, and amount all match exactly — there's no external transaction id in a CSV/XLSX export, so this triple is the natural identity for a statement line.
+- On import, a duplicate row is skipped (not inserted again) and its existing category — whether auto-assigned or manually corrected via US-4/FE-5 — is left completely untouched; re-importing never resets a transaction back to a fresh auto-categorized or uncategorized state.
+- `ImportResultResponse` reports a distinct duplicate count, separate from the existing malformed-row `skippedCount`, so a user can tell "this row was junk" apart from "this row was already here." (The existing upload screen, FE-3, already renders this summary and picks up the new count with a small display update — not a new screen.)
+- Covered by tests the same way import is already tested (service unit tests + the Testcontainers-backed integration test), including a case that re-imports a file with partial overlap and confirms only the new rows are added.
+
 ---
 
 ## Stage 5 — Frontend (planned)
@@ -179,6 +214,32 @@ As a user, I want a simple landing page with the app name and a button per featu
 - A way to get back to the landing page from within a section (e.g. a "Back"/"Home" control), so the user isn't stuck once a section is open.
 - Out of scope for this story: the upload-statement screen (FE-3) and the backend connectivity check (FE-2) aren't part of this button set — their current behavior/placement is left as-is unless a future story revisits it.
 
+### FE-9: Manually add a transaction 🔜
+As a user, I want a form to manually add a single transaction so that I don't need Postman/curl to use the `POST /api/v1/transactions` endpoint from US-11.
+
+**Acceptance criteria:**
+- A form (date, description, amount) reachable from the "Review transactions" section posts to `POST /api/v1/transactions` (US-11).
+- On success, the transaction list refreshes to show the new row without a full page reload.
+- The form doesn't flip sign or apply any special-case handling on the amount — same signed-amount convention as everywhere else (expenses negative, income positive).
+- A validation failure surfaces the backend's real error message, matching every other screen's error-handling convention.
+
+### FE-10: Show period totals in the spending dashboard and comparison 🔜
+As a user, I want to see the overall total for my selected period directly on the Spending dashboard and Spending comparison screens, not just per-category numbers, using the all-categories totals from US-12.
+
+**Acceptance criteria:**
+- Spending dashboard: when viewing the all-categories breakdown for a date range, the total spent across all categories for that range is shown alongside the existing per-category list.
+- Spending comparison: an "All categories" option is added to the existing category selector (mirroring the dashboard's breakdown-vs-single-category pattern); selecting it renders the same current/previous-periods/average layout already used for a single category, but for the combined all-categories total from US-12.
+- Both reuse the existing typed API client/response handling patterns (`ApiError` message surfacing, TanStack Query) rather than introducing a parallel one-off fetch path.
+
+### FE-11: Login screen 🔜
+As a user, I want a login screen so that I have to authenticate before reaching any part of the app, using the login endpoint from US-13.
+
+**Acceptance criteria:**
+- A login form (username/password) is the only thing shown until authenticated — the landing page (FE-8) and every section are unreachable without logging in first.
+- On success, subsequent API calls carry whatever credential the backend issues (session cookie or token) automatically, so every existing screen keeps working unchanged.
+- A logout control ends the session and returns to the login form.
+- A failed login surfaces the backend's real error message (e.g. 401), not a generic failure string.
+
 ---
 
 ## Backlog / not yet scoped
@@ -186,4 +247,3 @@ As a user, I want a simple landing page with the app name and a button per featu
 - Editing/deleting individual transactions.
 - Recurring-transaction detection.
 - Multi-account support (currently assumes a single statement/account).
-- Authentication (currently a single-user, local app).
