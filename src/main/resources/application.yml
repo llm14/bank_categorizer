@@ -18,6 +18,21 @@ spring:
       max-file-size: 15MB
       max-request-size: 15MB
 
+server:
+  tomcat:
+    # Tomcat's default max-swallow-size (2MB) is well under our 15MB upload limit. When a
+    # multipart upload exceeds max-file-size/max-request-size, Tomcat commits the 413 response
+    # before the client has finished sending the (oversized) body; it then tries to swallow
+    # (read and discard) whatever's left so the connection can be closed cleanly. If the
+    # remaining unread bytes exceed max-swallow-size, Tomcat aborts the connection outright
+    # instead of swallowing it - which races with the client still writing the rest of the body
+    # and surfaces as a client-side connection-reset/I-O error (or a client hanging past the
+    # point the 413 was actually available) rather than a clean, completed 413 exchange. Set
+    # comfortably above the configured multipart limits so any realistically-oversized upload
+    # (a user's file being somewhat over 15MB, not a multi-GB abusive payload) gets fully
+    # swallowed and the exchange completes normally.
+    max-swallow-size: 25MB
+
 management:
   endpoints:
     web:

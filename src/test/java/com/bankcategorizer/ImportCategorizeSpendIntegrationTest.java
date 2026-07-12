@@ -1,6 +1,7 @@
 package com.bankcategorizer;
 
 import com.bankcategorizer.dto.CategoryResponse;
+import com.bankcategorizer.dto.ErrorResponse;
 import com.bankcategorizer.dto.ImportResultResponse;
 import com.bankcategorizer.dto.PageResponse;
 import com.bankcategorizer.dto.SpendingResponse;
@@ -27,6 +28,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -164,5 +167,52 @@ class ImportCategorizeSpendIntegrationTest {
         assertThat(breakdown).hasSize(1);
         assertThat(breakdown.get(0).categoryId()).isEqualTo(groceriesCategoryId);
         assertThat(breakdown.get(0).totalSpent()).isEqualByComparingTo(new BigDecimal("45.30"));
+    }
+
+    /**
+     * Regression test for a real hang observed when uploading a file over the configured 15MB
+     * limit: the server computes and sends the correct 413 response promptly, but the exchange
+     * used to never complete cleanly from the client's point of view (the connection stayed open
+     * instead of being closed), so a real HTTP client would sit waiting well past when the
+     * response was actually available. This drives the real embedded HTTP server over a real
+     * socket (not MockMvc, which never reproduces this) and asserts both the correct 413 body
+     * AND that the call returns promptly, rather than needing a test-level timeout to fail it.
+     */
+    @Test
+    void importOversizedFile_respondsWith413Promptly() {
+        TestRestTemplate restTemplate = new TestRestTemplate();
+        String baseUrl = "http://localhost:" + port;
+
+        // One byte over the 15MB (spring.servlet.multipart.max-file-size) limit.
+        byte[] oversizedContent = new byte[15 * 1024 * 1024 + 1];
+
+        ByteArrayResource fileResource = new ByteArrayResource(oversizedContent) {
+            @Override
+            public String getFilename() {
+                return "oversized.csv";
+            }
+        };
+
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", fileResource);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        HttpEntity<MultiValueMap<String, Object>> importRequest = new HttpEntity<>(body, headers);
+
+        Instant start = Instant.now();
+        ResponseEntity<ErrorResponse> importResponse = restTemplate.postForEntity(
+                baseUrl + "/api/v1/transactions/import", importRequest, ErrorResponse.class);
+        Duration elapsed = Duration.between(start, Instant.now());
+
+        assertThat(importResponse.getStatusCode()).isEqualTo(HttpStatus.PAYLOAD_TOO_LARGE);
+        ErrorResponse errorBody = importResponse.getBody();
+        assertThat(errorBody).isNotNull();
+        assertThat(errorBody.status()).isEqualTo(413);
+        assertThat(errorBody.message()).isEqualTo("Uploaded file exceeds the maximum allowed size");
+
+        // The real bug: the exchange used to hang well past this even though the response body
+        // above was already computed and sent by the server.
+        assertThat(elapsed).isLessThan(Duration.ofSeconds(10));
     }
 }
