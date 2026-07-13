@@ -1,6 +1,7 @@
 package com.bankcategorizer.service;
 
 import com.bankcategorizer.dto.PageResponse;
+import com.bankcategorizer.dto.TransactionCreateRequest;
 import com.bankcategorizer.dto.TransactionResponse;
 import com.bankcategorizer.dto.TransactionUpdateRequest;
 import com.bankcategorizer.exception.ResourceNotFoundException;
@@ -30,10 +31,13 @@ public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final CategoryRepository categoryRepository;
+    private final CategorizationService categorizationService;
 
-    public TransactionService(TransactionRepository transactionRepository, CategoryRepository categoryRepository) {
+    public TransactionService(TransactionRepository transactionRepository, CategoryRepository categoryRepository,
+            CategorizationService categorizationService) {
         this.transactionRepository = transactionRepository;
         this.categoryRepository = categoryRepository;
+        this.categorizationService = categorizationService;
     }
 
     @Transactional(readOnly = true)
@@ -44,6 +48,25 @@ public class TransactionService {
     @Transactional(readOnly = true)
     public PageResponse<TransactionResponse> findUncategorized(Pageable pageable) {
         return toPageResponse(transactionRepository.findByCategoryIsNull(pageable));
+    }
+
+    @Transactional
+    public TransactionResponse create(TransactionCreateRequest request) {
+        List<Category> categories = categorizationService.loadCategories();
+        Category matchedCategory = categorizationService.match(request.description(), categories).orElse(null);
+
+        Transaction transaction = Transaction.builder()
+                .date(request.date())
+                .description(request.description())
+                .amount(request.amount())
+                .category(matchedCategory)
+                .build();
+        Transaction saved = transactionRepository.save(transaction);
+
+        log.info("Manually added transaction {} ({}), auto-categorized to {}",
+                saved.getId(), saved.getDescription(),
+                matchedCategory != null ? matchedCategory.getName() : "uncategorized");
+        return toResponse(saved);
     }
 
     @Transactional

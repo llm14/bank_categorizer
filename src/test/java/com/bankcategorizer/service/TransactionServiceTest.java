@@ -1,6 +1,7 @@
 package com.bankcategorizer.service;
 
 import com.bankcategorizer.dto.PageResponse;
+import com.bankcategorizer.dto.TransactionCreateRequest;
 import com.bankcategorizer.dto.TransactionResponse;
 import com.bankcategorizer.dto.TransactionUpdateRequest;
 import com.bankcategorizer.exception.ResourceNotFoundException;
@@ -38,11 +39,14 @@ class TransactionServiceTest {
     @Mock
     private CategoryRepository categoryRepository;
 
+    @Mock
+    private CategorizationService categorizationService;
+
     private TransactionService transactionService;
 
     @BeforeEach
     void setUp() {
-        transactionService = new TransactionService(transactionRepository, categoryRepository);
+        transactionService = new TransactionService(transactionRepository, categoryRepository, categorizationService);
     }
 
     @Test
@@ -86,6 +90,43 @@ class TransactionServiceTest {
         assertThat(page.content().get(0).id()).isEqualTo(2L);
         assertThat(page.content().get(0).categoryId()).isNull();
         assertThat(page.totalElements()).isEqualTo(1);
+    }
+
+    @Test
+    void create_matchingCategory_categorizesTransactionUsingCategorizationService() {
+        Category groceries = Category.builder().id(1L).name("Groceries").build();
+        List<Category> categories = List.of(groceries);
+        TransactionCreateRequest request = new TransactionCreateRequest(
+                LocalDate.of(2024, 1, 1), "MERCADONA MADRID", new BigDecimal("-54.32"));
+        when(categorizationService.loadCategories()).thenReturn(categories);
+        when(categorizationService.match("MERCADONA MADRID", categories)).thenReturn(Optional.of(groceries));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TransactionResponse response = transactionService.create(request);
+
+        assertThat(response.date()).isEqualTo(LocalDate.of(2024, 1, 1));
+        assertThat(response.description()).isEqualTo("MERCADONA MADRID");
+        assertThat(response.amount()).isEqualByComparingTo("-54.32");
+        assertThat(response.categoryId()).isEqualTo(1L);
+        assertThat(response.categoryName()).isEqualTo("Groceries");
+        verify(categorizationService).loadCategories();
+        verify(categorizationService).match("MERCADONA MADRID", categories);
+    }
+
+    @Test
+    void create_noMatchingCategory_savesUncategorizedTransaction() {
+        List<Category> categories = List.of();
+        TransactionCreateRequest request = new TransactionCreateRequest(
+                LocalDate.of(2024, 1, 2), "Unknown merchant", new BigDecimal("5.00"));
+        when(categorizationService.loadCategories()).thenReturn(categories);
+        when(categorizationService.match("Unknown merchant", categories)).thenReturn(Optional.empty());
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TransactionResponse response = transactionService.create(request);
+
+        assertThat(response.categoryId()).isNull();
+        assertThat(response.categoryName()).isNull();
+        assertThat(response.amount()).isEqualByComparingTo("5.00");
     }
 
     @Test

@@ -106,7 +106,7 @@ As a user uploading a real bank statement in a deployed environment, I want the 
 - Exceeding the limit returns a clear 400/413 error via `GlobalExceptionHandler`, not a generic 500.
 - `README.md`'s configuration section is corrected (it currently references a nonexistent `application.properties` instead of `application.yml`) and documents the `prod` profile's required environment variables (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`), including `DB_URL`'s expected JDBC URL format.
 
-### US-11: Manually add a transaction 🔜
+### US-11: Manually add a transaction ✅
 As a user, I want to manually add a single transaction (not just via CSV/XLSX import) so that I can record something a statement never included, like a cash payment. This is the backend endpoint FE-9 (Stage 5) builds a form against.
 
 **Acceptance criteria:**
