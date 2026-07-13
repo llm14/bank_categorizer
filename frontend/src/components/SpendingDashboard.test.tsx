@@ -6,7 +6,7 @@ import { SpendingDashboard } from "./SpendingDashboard";
 import { listCategories } from "../api/categories";
 import { ApiError } from "../api/client";
 import { getSpendingBreakdown, getSpendingForCategory } from "../api/spending";
-import type { CategoryResponse, SpendingResponse } from "../api/types";
+import type { CategoryResponse, SpendingBreakdownResponse, SpendingResponse } from "../api/types";
 
 vi.mock("../api/categories");
 vi.mock("../api/spending");
@@ -47,6 +47,10 @@ function spending(overrides: Partial<SpendingResponse> = {}): SpendingResponse {
   };
 }
 
+function breakdown(entries: SpendingResponse[], totalSpent = 0): SpendingBreakdownResponse {
+  return { breakdown: entries, totalSpent };
+}
+
 function setRange(from: string, to: string) {
   const fromInput = screen.getByLabelText(/^from$/i);
   const toInput = screen.getByLabelText(/^to$/i);
@@ -71,10 +75,15 @@ describe("SpendingDashboard", () => {
 
   it("renders the breakdown across categories once both dates are filled in", async () => {
     mockedListCategories.mockResolvedValue([category()]);
-    mockedGetSpendingBreakdown.mockResolvedValue([
-      spending({ categoryId: 1, categoryName: "Groceries", totalSpent: 100 }),
-      spending({ categoryId: 2, categoryName: "Dining", totalSpent: 50 }),
-    ]);
+    mockedGetSpendingBreakdown.mockResolvedValue(
+      breakdown(
+        [
+          spending({ categoryId: 1, categoryName: "Groceries", totalSpent: 100 }),
+          spending({ categoryId: 2, categoryName: "Dining", totalSpent: 50 }),
+        ],
+        150,
+      ),
+    );
 
     renderWithClient();
     setRange("2026-07-01", "2026-07-31");
@@ -91,7 +100,7 @@ describe("SpendingDashboard", () => {
       category({ id: 1, name: "Groceries" }),
       category({ id: 2, name: "Dining" }),
     ]);
-    mockedGetSpendingBreakdown.mockResolvedValue([spending()]);
+    mockedGetSpendingBreakdown.mockResolvedValue(breakdown([spending()], 123.45));
     mockedGetSpendingForCategory.mockResolvedValue(
       spending({ categoryId: 2, categoryName: "Dining", totalSpent: 75 }),
     );
@@ -117,7 +126,7 @@ describe("SpendingDashboard", () => {
       category({ id: 1, name: "Groceries" }),
       category({ id: 2, name: "Dining" }),
     ]);
-    mockedGetSpendingBreakdown.mockResolvedValue([spending()]);
+    mockedGetSpendingBreakdown.mockResolvedValue(breakdown([spending()], 123.45));
     mockedGetSpendingForCategory.mockResolvedValue(
       spending({ categoryId: 2, categoryName: "Dining", totalSpent: 75 }),
     );
@@ -162,7 +171,7 @@ describe("SpendingDashboard", () => {
 
   it("shows the backend's error message for an unknown category (404)", async () => {
     mockedListCategories.mockResolvedValue([category({ id: 1, name: "Groceries" })]);
-    mockedGetSpendingBreakdown.mockResolvedValue([spending()]);
+    mockedGetSpendingBreakdown.mockResolvedValue(breakdown([spending()], 123.45));
     mockedGetSpendingForCategory.mockRejectedValue(
       new ApiError(404, {
         timestamp: "2026-07-10T00:00:00Z",

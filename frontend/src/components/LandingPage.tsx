@@ -64,7 +64,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
             Bank Categorizer
           </h1>
           <p className="mt-1 font-ledger-body text-sm text-ledger-muted">
-            Personal ledger &mdash; single user, no sign-in required.
+            Personal ledger &mdash; single user.
           </p>
 
           <div className="mt-6 border-t border-dashed border-ledger-ink/30" aria-hidden="true" />

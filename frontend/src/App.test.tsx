@@ -1,9 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { vi } from "vitest";
 import App from "./App";
+import { setToken } from "./api/authToken";
 
+vi.mock("./api/auth", () => ({
+  login: vi.fn(),
+  logout: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("./components/HealthStatus", () => ({
   HealthStatus: () => <div>health-status-stub</div>,
 }));
@@ -30,7 +35,52 @@ const SECTION_STUBS = [
   "spending-comparison-stub",
 ];
 
+describe("App authentication gating (FE-11)", () => {
+  afterEach(() => {
+    setToken(null);
+  });
+
+  it("shows only the login screen when no token is stored", () => {
+    render(<App />);
+
+    expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
+
+    expect(screen.queryByText("health-status-stub")).not.toBeInTheDocument();
+    expect(screen.queryByText("upload-statement-stub")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Manage categories" })).not.toBeInTheDocument();
+  });
+
+  it("skips the login screen when a token already exists (e.g. after a page refresh)", () => {
+    setToken("existing-token");
+
+    render(<App />);
+
+    expect(screen.queryByRole("button", { name: /sign in/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Bank Categorizer" })).toBeInTheDocument();
+  });
+
+  it("logging out clears the token and returns to the login screen", async () => {
+    setToken("existing-token");
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole("button", { name: /log out/i }));
+
+    expect(await screen.findByRole("button", { name: /sign in/i })).toBeInTheDocument();
+  });
+});
+
 describe("App navigation (FE-8)", () => {
+  beforeEach(() => {
+    setToken("test-token");
+  });
+
+  afterEach(() => {
+    setToken(null);
+  });
+
   it("defaults to the landing page: app name, four buttons, no section content", () => {
     render(<App />);
 

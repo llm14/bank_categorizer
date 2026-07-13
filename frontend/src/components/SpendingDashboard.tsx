@@ -113,28 +113,34 @@ export function SpendingDashboard() {
           </p>
         )}
 
-        {hasRange && !hasCategory && breakdownQuery.isSuccess && breakdownQuery.data.length === 0 && (
-          <p className="text-gray-600">No spending found for this range.</p>
-        )}
+        {hasRange &&
+          !hasCategory &&
+          breakdownQuery.isSuccess &&
+          breakdownQuery.data.breakdown.length === 0 && (
+            <p className="text-gray-600">No spending found for this range.</p>
+          )}
 
-        {hasRange && !hasCategory && breakdownQuery.isSuccess && breakdownQuery.data.length > 0 && (
-          <table className="mt-2 w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 text-gray-500">
-                <th className="py-2 pr-4 font-medium">Category</th>
-                <th className="py-2 pr-4 font-medium">Total spent</th>
-              </tr>
-            </thead>
-            <tbody>
-              {breakdownQuery.data.map((entry) => (
-                <tr key={entry.categoryId} className="border-b border-gray-100">
-                  <td className="py-2 pr-4">{entry.categoryName}</td>
-                  <td className="py-2 pr-4">{entry.totalSpent}</td>
+        {hasRange &&
+          !hasCategory &&
+          breakdownQuery.isSuccess &&
+          breakdownQuery.data.breakdown.length > 0 && (
+            <table className="mt-2 w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 text-gray-500">
+                  <th className="py-2 pr-4 font-medium">Category</th>
+                  <th className="py-2 pr-4 font-medium">Total spent</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              </thead>
+              <tbody>
+                {breakdownQuery.data.breakdown.map((entry) => (
+                  <tr key={entry.categoryId} className="border-b border-gray-100">
+                    <td className="py-2 pr-4">{entry.categoryName}</td>
+                    <td className="py-2 pr-4">{entry.totalSpent}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
 
         {hasRange && hasCategory && singleCategoryQuery.isSuccess && (
           <div className="mt-2 text-sm text-gray-900">

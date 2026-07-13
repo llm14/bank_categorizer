@@ -1,4 +1,5 @@
 import type { ErrorResponse } from "./types";
+import { getToken, notifyUnauthorized } from "./authToken";
 
 /**
  * Base URL of the backend API. Always read from VITE_API_BASE_URL - never hardcode a
@@ -32,6 +33,26 @@ async function parseErrorBody(response: Response): Promise<ErrorResponse | undef
   }
 }
 
+/** Attaches `Authorization: Bearer <token>` when a token is currently stored (see authToken.ts). */
+function authHeaders(): Record<string, string> {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+/**
+ * Builds and throws the ApiError for a non-ok response, first notifying the registered
+ * "unauthorized" handler on a 401 so the app can drop back to the login screen regardless
+ * of which screen/endpoint triggered it. Still throws afterward so the calling screen's
+ * existing error handling (e.g. rendering `error.message`) is unaffected.
+ */
+async function throwForResponse(response: Response): Promise<never> {
+  const body = await parseErrorBody(response);
+  if (response.status === 401) {
+    notifyUnauthorized();
+  }
+  throw new ApiError(response.status, body);
+}
+
 /** Low-level JSON request helper shared by every typed endpoint function below. */
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -39,12 +60,13 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers: {
       Accept: "application/json",
       ...(init?.body ? { "Content-Type": "application/json" } : {}),
+      ...authHeaders(),
       ...init?.headers,
     },
   });
 
   if (!response.ok) {
-    throw new ApiError(response.status, await parseErrorBody(response));
+    return throwForResponse(response);
   }
 
   if (response.status === 204) {
@@ -62,12 +84,13 @@ export async function requestFormData<T>(path: string, formData: FormData, init?
     body: formData,
     headers: {
       Accept: "application/json",
+      ...authHeaders(),
       ...init?.headers,
     },
   });
 
   if (!response.ok) {
-    throw new ApiError(response.status, await parseErrorBody(response));
+    return throwForResponse(response);
   }
 
   if (response.status === 204) {
