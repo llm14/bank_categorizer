@@ -33,14 +33,18 @@ export function getSpendingBreakdown(
 }
 
 export interface CompareSpendingParams {
-  category: number;
+  /** Omitted -> compares all categories combined instead of a single one. */
+  category?: number;
   /** Only "month" is supported by the backend today. */
   period?: string;
   /** Bounded 1-24 by the backend. */
   lookback?: number;
 }
 
-/** GET /api/v1/spending/compare?category={id}&period=month&lookback={n} */
+/**
+ * GET /api/v1/spending/compare?category={id}&period=month&lookback={n}, or without `category`
+ * to compare all categories combined.
+ */
 export function compareSpending(
   params: CompareSpendingParams,
 ): Promise<SpendingComparisonResponse> {

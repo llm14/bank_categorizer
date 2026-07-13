@@ -124,22 +124,29 @@ export function SpendingDashboard() {
           !hasCategory &&
           breakdownQuery.isSuccess &&
           breakdownQuery.data.breakdown.length > 0 && (
-            <table className="mt-2 w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 text-gray-500">
-                  <th className="py-2 pr-4 font-medium">Category</th>
-                  <th className="py-2 pr-4 font-medium">Total spent</th>
-                </tr>
-              </thead>
-              <tbody>
-                {breakdownQuery.data.breakdown.map((entry) => (
-                  <tr key={entry.categoryId} className="border-b border-gray-100">
-                    <td className="py-2 pr-4">{entry.categoryName}</td>
-                    <td className="py-2 pr-4">{entry.totalSpent}</td>
+            <>
+              <table className="mt-2 w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 text-gray-500">
+                    <th className="py-2 pr-4 font-medium">Category</th>
+                    <th className="py-2 pr-4 font-medium">Total spent</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {breakdownQuery.data.breakdown.map((entry) => (
+                    <tr key={entry.categoryId} className="border-b border-gray-100">
+                      <td className="py-2 pr-4">{entry.categoryName}</td>
+                      <td className="py-2 pr-4">{entry.totalSpent}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div className="mt-3 text-sm text-gray-900">
+                <span className="font-medium">Total spent (all categories):</span>{" "}
+                {breakdownQuery.data.totalSpent}
+              </div>
+            </>
           )}
 
         {hasRange && hasCategory && singleCategoryQuery.isSuccess && (

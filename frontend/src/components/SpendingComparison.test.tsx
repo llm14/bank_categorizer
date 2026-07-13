@@ -119,6 +119,27 @@ describe("SpendingComparison", () => {
     });
   });
 
+  it("compares all categories combined when 'All categories' is selected", async () => {
+    mockedListCategories.mockResolvedValue([category()]);
+    mockedCompareSpending.mockResolvedValue(
+      comparison({ categoryId: null, categoryName: null }),
+    );
+
+    renderWithClient();
+    const user = userEvent.setup();
+
+    await screen.findByRole("option", { name: "Groceries" });
+    await user.selectOptions(screen.getByLabelText(/^category$/i), "all");
+
+    expect(await screen.findByText(/2026-07/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "All categories" })).toBeInTheDocument();
+    expect(mockedCompareSpending).toHaveBeenCalledWith({
+      category: undefined,
+      period: "month",
+      lookback: 3,
+    });
+  });
+
   it("shows the backend's actual message for an out-of-range lookback (400)", async () => {
     mockedListCategories.mockResolvedValue([category()]);
     mockedCompareSpending.mockRejectedValue(

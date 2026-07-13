@@ -91,10 +91,14 @@ export interface PeriodSpending {
   totalSpent: number;
 }
 
-/** Mirrors com.bankcategorizer.dto.SpendingComparisonResponse. */
+/**
+ * Mirrors com.bankcategorizer.dto.SpendingComparisonResponse. categoryId/categoryName are
+ * both null when comparing across all categories combined (category omitted from the
+ * request) - see SpendingComparisonService's null-categoryId branch.
+ */
 export interface SpendingComparisonResponse {
-  categoryId: number;
-  categoryName: string;
+  categoryId: number | null;
+  categoryName: string | null;
   period: string;
   lookback: number;
   current: PeriodSpending;

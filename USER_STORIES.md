@@ -223,7 +223,7 @@ As a user, I want a form to manually add a single transaction so that I don't ne
 - The form doesn't flip sign or apply any special-case handling on the amount — same signed-amount convention as everywhere else (expenses negative, income positive).
 - A validation failure surfaces the backend's real error message, matching every other screen's error-handling convention.
 
-### FE-10: Show period totals in the spending dashboard and comparison 🔜
+### FE-10: Show period totals in the spending dashboard and comparison ✅
 As a user, I want to see the overall total for my selected period directly on the Spending dashboard and Spending comparison screens, not just per-category numbers, using the all-categories totals from US-12.
 
 **Note:** US-12's response shape change (`GET /api/v1/spending`'s no-category response moved from a bare `SpendingResponse[]` to `{ breakdown: SpendingResponse[], totalSpent: BigDecimal }`) had silently broken `SpendingDashboard.tsx` (FE-6) — already fixed separately (a `SpendingBreakdownResponse` type was added and the component updated to read `response.breakdown`). What's left for this story is purely additive: actually surfacing `totalSpent` in the UI and adding the all-categories comparison option.

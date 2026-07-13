@@ -7,6 +7,7 @@ import { compareSpending } from "../api/spending";
 const CATEGORIES_QUERY_KEY = ["categories"];
 
 const NO_CATEGORY_VALUE = "";
+const ALL_CATEGORIES_VALUE = "all";
 
 const DEFAULT_LOOKBACK = 3;
 const MIN_LOOKBACK = 1;
@@ -32,7 +33,8 @@ export function SpendingComparison() {
   const [categoryId, setCategoryId] = useState<string>(NO_CATEGORY_VALUE);
   const [lookback, setLookback] = useState<number>(DEFAULT_LOOKBACK);
 
-  const hasCategory = categoryId !== NO_CATEGORY_VALUE;
+  const hasSelection = categoryId !== NO_CATEGORY_VALUE;
+  const isAllCategories = categoryId === ALL_CATEGORIES_VALUE;
 
   const categoriesQuery = useQuery({
     queryKey: CATEGORIES_QUERY_KEY,
@@ -42,8 +44,12 @@ export function SpendingComparison() {
   const comparisonQuery = useQuery({
     queryKey: ["spending", "compare", { categoryId, lookback }],
     queryFn: () =>
-      compareSpending({ category: Number(categoryId), period: "month", lookback }),
-    enabled: hasCategory,
+      compareSpending({
+        category: isAllCategories ? undefined : Number(categoryId),
+        period: "month",
+        lookback,
+      }),
+    enabled: hasSelection,
   });
 
   const categories = categoriesQuery.data ?? [];
@@ -65,6 +71,7 @@ export function SpendingComparison() {
             className="mt-1 rounded-md border border-gray-300 px-2 py-1 text-sm"
           >
             <option value={NO_CATEGORY_VALUE}>Select a category&hellip;</option>
+            <option value={ALL_CATEGORIES_VALUE}>All categories</option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}
@@ -88,24 +95,24 @@ export function SpendingComparison() {
       </div>
 
       <div className="mt-4">
-        {!hasCategory && (
+        {!hasSelection && (
           <p className="text-gray-600">Pick a category to compare its spending.</p>
         )}
 
-        {hasCategory && comparisonQuery.isLoading && (
+        {hasSelection && comparisonQuery.isLoading && (
           <p className="text-gray-600">Loading comparison...</p>
         )}
 
-        {hasCategory && comparisonQuery.isError && (
+        {hasSelection && comparisonQuery.isError && (
           <p className="text-red-700">
             {errorMessage(comparisonQuery.error) ?? "Failed to load spending comparison."}
           </p>
         )}
 
-        {hasCategory && comparisonQuery.isSuccess && (
+        {hasSelection && comparisonQuery.isSuccess && (
           <div className="mt-2">
             <h3 className="text-sm font-medium text-gray-500">
-              {comparisonQuery.data.categoryName}
+              {comparisonQuery.data.categoryName ?? "All categories"}
             </h3>
 
             <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm">
