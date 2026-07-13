@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ReviewTransactions } from "./ReviewTransactions";
 import { listCategories } from "../api/categories";
 import { ApiError } from "../api/client";
-import { listTransactions, updateTransactionCategory } from "../api/transactions";
+import { createTransaction, listTransactions, updateTransactionCategory } from "../api/transactions";
 import type { CategoryResponse, PageResponse, TransactionResponse } from "../api/types";
 
 vi.mock("../api/categories");
@@ -14,6 +14,7 @@ vi.mock("../api/transactions");
 const mockedListCategories = vi.mocked(listCategories);
 const mockedListTransactions = vi.mocked(listTransactions);
 const mockedUpdateTransactionCategory = vi.mocked(updateTransactionCategory);
+const mockedCreateTransaction = vi.mocked(createTransaction);
 
 function renderWithClient() {
   const queryClient = new QueryClient({
@@ -194,5 +195,59 @@ describe("ReviewTransactions", () => {
     await user.selectOptions(screen.getByLabelText(/category for walmart/i), "2");
 
     expect(await screen.findByText(/transaction 1 not found/i)).toBeInTheDocument();
+  });
+
+  it("submitting the add-transaction form creates the transaction and refreshes the list", async () => {
+    mockedListCategories.mockResolvedValue([category()]);
+    mockedListTransactions
+      .mockResolvedValueOnce(page([]))
+      .mockResolvedValueOnce(page([transaction({ id: 2, description: "Cash payment", amount: -15 })]));
+    mockedCreateTransaction.mockResolvedValue(
+      transaction({ id: 2, description: "Cash payment", amount: -15, categoryId: null, categoryName: null }),
+    );
+
+    renderWithClient();
+    const user = userEvent.setup();
+
+    await screen.findByText(/no transactions found/i);
+
+    await user.type(screen.getByLabelText(/date/i), "2026-07-12");
+    await user.type(screen.getByLabelText(/description/i), "Cash payment");
+    await user.type(screen.getByLabelText(/amount/i), "-15");
+    await user.click(screen.getByRole("button", { name: /add transaction/i }));
+
+    expect(mockedCreateTransaction).toHaveBeenCalledWith({
+      date: "2026-07-12",
+      description: "Cash payment",
+      amount: -15,
+    });
+
+    expect(await screen.findByText("Cash payment")).toBeInTheDocument();
+    expect(mockedListTransactions).toHaveBeenCalledTimes(2);
+  });
+
+  it("shows the real backend error message when adding a transaction fails validation", async () => {
+    mockedListCategories.mockResolvedValue([category()]);
+    mockedListTransactions.mockResolvedValue(page([]));
+    mockedCreateTransaction.mockRejectedValue(
+      new ApiError(400, {
+        timestamp: "2026-07-10T00:00:00Z",
+        status: 400,
+        error: "Bad Request",
+        message: "description is required",
+      }),
+    );
+
+    renderWithClient();
+    const user = userEvent.setup();
+
+    await screen.findByText(/no transactions found/i);
+
+    await user.type(screen.getByLabelText(/date/i), "2026-07-12");
+    await user.type(screen.getByLabelText(/description/i), "x");
+    await user.type(screen.getByLabelText(/amount/i), "-15");
+    await user.click(screen.getByRole("button", { name: /add transaction/i }));
+
+    expect(await screen.findByText(/description is required/i)).toBeInTheDocument();
   });
 });

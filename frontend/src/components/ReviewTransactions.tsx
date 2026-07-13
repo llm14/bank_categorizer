@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import type { FormEvent } from "react";
 import { listCategories } from "../api/categories";
 import { ApiError } from "../api/client";
-import { listTransactions, updateTransactionCategory } from "../api/transactions";
+import { createTransaction, listTransactions, updateTransactionCategory } from "../api/transactions";
 import { UNCATEGORIZED_FILTER } from "../api/types";
-import type { TransactionCategoryFilter, TransactionResponse } from "../api/types";
+import type { TransactionCategoryFilter, TransactionCreateRequest, TransactionResponse } from "../api/types";
 
 const CATEGORIES_QUERY_KEY = ["categories"];
 
@@ -44,6 +45,10 @@ export function ReviewTransactions() {
   const [uncategorizedOnly, setUncategorizedOnly] = useState(false);
   const [sort, setSort] = useState<SortState>({ field: "date", direction: "desc" });
 
+  const [newDate, setNewDate] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newAmount, setNewAmount] = useState("");
+
   const transactionsParams: {
     category?: TransactionCategoryFilter;
     page: number;
@@ -74,6 +79,16 @@ export function ReviewTransactions() {
     },
   });
 
+  const createMutation = useMutation({
+    mutationFn: (body: TransactionCreateRequest) => createTransaction(body),
+    onSuccess: () => {
+      setNewDate("");
+      setNewDescription("");
+      setNewAmount("");
+      void queryClient.invalidateQueries({ queryKey: ["transactions"] });
+    },
+  });
+
   function handleFilterToggle() {
     setUncategorizedOnly((current) => !current);
     setPage(0);
@@ -87,6 +102,15 @@ export function ReviewTransactions() {
       return { field, direction: "asc" };
     });
     setPage(0);
+  }
+
+  function handleAddTransaction(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    createMutation.mutate({
+      date: newDate,
+      description: newDescription.trim(),
+      amount: Number(newAmount),
+    });
   }
 
   function handleCategoryChange(transaction: TransactionResponse, categoryId: string) {
@@ -112,6 +136,69 @@ export function ReviewTransactions() {
       <p className="mt-1 text-sm text-gray-500">
         Review imported transactions and fix their category assignment.
       </p>
+
+      <form
+        className="mt-4 flex flex-wrap items-end gap-3 rounded-md border border-gray-200 p-4"
+        onSubmit={handleAddTransaction}
+      >
+        <div>
+          <label htmlFor="new-transaction-date" className="block text-sm font-medium text-gray-700">
+            Date
+          </label>
+          <input
+            id="new-transaction-date"
+            type="date"
+            required
+            value={newDate}
+            onChange={(event) => setNewDate(event.target.value)}
+            className="mt-1 block rounded-md border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div className="flex-1">
+          <label htmlFor="new-transaction-description" className="block text-sm font-medium text-gray-700">
+            Description
+          </label>
+          <input
+            id="new-transaction-description"
+            type="text"
+            required
+            value={newDescription}
+            onChange={(event) => setNewDescription(event.target.value)}
+            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="new-transaction-amount" className="block text-sm font-medium text-gray-700">
+            Amount
+          </label>
+          <input
+            id="new-transaction-amount"
+            type="number"
+            step="0.01"
+            required
+            placeholder="e.g. -42.50"
+            value={newAmount}
+            onChange={(event) => setNewAmount(event.target.value)}
+            className="mt-1 block w-32 rounded-md border border-gray-300 px-3 py-2 text-sm"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={!newDate || !newDescription.trim() || !newAmount || createMutation.isPending}
+          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+        >
+          {createMutation.isPending ? "Adding..." : "Add transaction"}
+        </button>
+
+        {createMutation.isError && (
+          <p role="alert" className="w-full text-sm text-red-700">
+            {errorMessage(createMutation.error)}
+          </p>
+        )}
+      </form>
 
       <label className="mt-4 flex items-center gap-2 text-sm text-gray-700">
         <input
