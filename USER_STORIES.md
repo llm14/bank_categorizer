@@ -226,19 +226,23 @@ As a user, I want a form to manually add a single transaction so that I don't ne
 ### FE-10: Show period totals in the spending dashboard and comparison 🔜
 As a user, I want to see the overall total for my selected period directly on the Spending dashboard and Spending comparison screens, not just per-category numbers, using the all-categories totals from US-12.
 
+**Note:** US-12's response shape change (`GET /api/v1/spending`'s no-category response moved from a bare `SpendingResponse[]` to `{ breakdown: SpendingResponse[], totalSpent: BigDecimal }`) had silently broken `SpendingDashboard.tsx` (FE-6) — already fixed separately (a `SpendingBreakdownResponse` type was added and the component updated to read `response.breakdown`). What's left for this story is purely additive: actually surfacing `totalSpent` in the UI and adding the all-categories comparison option.
+
 **Acceptance criteria:**
-- Spending dashboard: when viewing the all-categories breakdown for a date range, the total spent across all categories for that range is shown alongside the existing per-category list.
-- Spending comparison: an "All categories" option is added to the existing category selector (mirroring the dashboard's breakdown-vs-single-category pattern); selecting it renders the same current/previous-periods/average layout already used for a single category, but for the combined all-categories total from US-12.
+- Spending dashboard: the all-categories breakdown view shows `response.totalSpent` alongside the existing per-category list.
+- Spending comparison: an "All categories" option is added to the existing category selector (mirroring the dashboard's breakdown-vs-single-category pattern); selecting it calls `compareSpending` with `category` omitted and renders the same current/previous-periods/average layout already used for a single category, but for the combined all-categories total from US-12.
 - Both reuse the existing typed API client/response handling patterns (`ApiError` message surfacing, TanStack Query) rather than introducing a parallel one-off fetch path.
 
-### FE-11: Login screen 🔜
+### FE-11: Login screen ✅
 As a user, I want a login screen so that I have to authenticate before reaching any part of the app, using the login endpoint from US-13.
 
+**This is now urgent, not just the next story in sequence:** US-13 gated every `/api/v1/**` endpoint behind a bearer token, and `frontend/src/api/client.ts` currently attaches no `Authorization` header at all. As a result, **every screen built in FE-3 through FE-8 is currently non-functional against `main`** — each returns 401 (only `HealthStatus`, which hits the still-open `/actuator/health`, still works). This isn't a future integration concern; the app is broken end-to-end until this ships.
+
 **Acceptance criteria:**
-- A login form (username/password) is the only thing shown until authenticated — the landing page (FE-8) and every section are unreachable without logging in first.
-- On success, subsequent API calls carry whatever credential the backend issues (session cookie or token) automatically, so every existing screen keeps working unchanged.
-- A logout control ends the session and returns to the login form.
-- A failed login surfaces the backend's real error message (e.g. 401), not a generic failure string.
+- A login form (username/password) is the only thing shown until authenticated — the landing page (FE-8) and every section are unreachable without logging in first. Calls `POST /api/v1/auth/login`.
+- On success, store the returned bearer token (e.g. in memory/component state, or `sessionStorage` if it should survive a page refresh — your call) and update `client.ts`'s shared `request`/`requestFormData` helpers to attach `Authorization: Bearer <token>` to every subsequent request, so every existing screen (FE-3 through FE-10) works unchanged with no per-screen changes needed.
+- A logout control calls `POST /api/v1/auth/logout`, clears the stored token, and returns to the login form.
+- A failed login surfaces the backend's real error message (401, generic "Invalid username or password") — not a generic failure string. A 401 from any *other* endpoint (e.g. an expired token) should also drop the user back to the login form rather than showing a raw error on whatever screen they were on.
 
 ---
 

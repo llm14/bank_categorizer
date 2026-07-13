@@ -67,6 +67,12 @@ export interface SpendingResponse {
   totalSpent: number;
 }
 
+/** Mirrors com.bankcategorizer.dto.SpendingBreakdownResponse. */
+export interface SpendingBreakdownResponse {
+  breakdown: SpendingResponse[];
+  totalSpent: number;
+}
+
 /** Mirrors com.bankcategorizer.dto.PeriodSpending. */
 export interface PeriodSpending {
   label: string;
@@ -102,6 +108,17 @@ export interface PageResponse<T> {
 export interface HealthResponse {
   status: string;
   components?: Record<string, unknown>;
+}
+
+/** Mirrors com.bankcategorizer.dto.LoginRequest. */
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+/** Mirrors com.bankcategorizer.dto.LoginResponse. */
+export interface LoginResponse {
+  token: string;
 }
 
 /** The only supported filter value for `GET /api/v1/transactions?category=...`. */

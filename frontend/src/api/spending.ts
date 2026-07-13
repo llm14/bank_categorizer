@@ -1,5 +1,9 @@
 import { buildQuery, request } from "./client";
-import type { SpendingComparisonResponse, SpendingResponse } from "./types";
+import type {
+  SpendingBreakdownResponse,
+  SpendingComparisonResponse,
+  SpendingResponse,
+} from "./types";
 
 export interface SpendingForCategoryParams {
   category: number;
@@ -23,9 +27,9 @@ export interface SpendingBreakdownParams {
 /** GET /api/v1/spending?from=&to= (no category -> breakdown across all categories). */
 export function getSpendingBreakdown(
   params: SpendingBreakdownParams = {},
-): Promise<SpendingResponse[]> {
+): Promise<SpendingBreakdownResponse> {
   const query = buildQuery({ from: params.from, to: params.to });
-  return request<SpendingResponse[]>(`/api/v1/spending${query}`);
+  return request<SpendingBreakdownResponse>(`/api/v1/spending${query}`);
 }
 
 export interface CompareSpendingParams {
