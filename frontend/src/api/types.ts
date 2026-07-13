@@ -58,6 +58,16 @@ export interface TransactionUpdateRequest {
   categoryId: number;
 }
 
+/**
+ * Mirrors com.bankcategorizer.dto.TransactionCreateRequest. Follows the same signed-amount
+ * convention as everywhere else (expenses negative, income positive) - no sign flipping here.
+ */
+export interface TransactionCreateRequest {
+  date: string;
+  description: string;
+  amount: number;
+}
+
 /** Mirrors com.bankcategorizer.dto.SpendingResponse. */
 export interface SpendingResponse {
   categoryId: number;

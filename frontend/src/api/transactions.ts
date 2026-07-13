@@ -3,6 +3,7 @@ import type {
   ImportResultResponse,
   PageResponse,
   TransactionCategoryFilter,
+  TransactionCreateRequest,
   TransactionResponse,
   TransactionUpdateRequest,
 } from "./types";
@@ -29,6 +30,17 @@ export function listTransactions(
     sort: params.sort,
   });
   return request<PageResponse<TransactionResponse>>(`/api/v1/transactions${query}`);
+}
+
+/**
+ * POST /api/v1/transactions - manually adds a single transaction (US-11). The created
+ * transaction is auto-categorized the same way an imported row is.
+ */
+export function createTransaction(body: TransactionCreateRequest): Promise<TransactionResponse> {
+  return request<TransactionResponse>("/api/v1/transactions", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 /** PATCH /api/v1/transactions/{id} */

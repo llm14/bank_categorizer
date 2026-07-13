@@ -214,7 +214,7 @@ As a user, I want a simple landing page with the app name and a button per featu
 - A way to get back to the landing page from within a section (e.g. a "Back"/"Home" control), so the user isn't stuck once a section is open.
 - Out of scope for this story: the upload-statement screen (FE-3) and the backend connectivity check (FE-2) aren't part of this button set — their current behavior/placement is left as-is unless a future story revisits it.
 
-### FE-9: Manually add a transaction 🔜
+### FE-9: Manually add a transaction ✅
 As a user, I want a form to manually add a single transaction so that I don't need Postman/curl to use the `POST /api/v1/transactions` endpoint from US-11.
 
 **Acceptance criteria:**
