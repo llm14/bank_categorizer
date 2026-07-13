@@ -40,6 +40,14 @@ services:
       # frontend's own host-mapped port below, since that's the origin a
       # browser actually loads the SPA from.
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:${FRONTEND_PORT:-3000}}
+      # Login credentials for the /api/v1/auth/login endpoint. The `prod`
+      # profile has no default (unlike dev/test), so these must be set here
+      # or Spring Boot fails to start on an unresolved placeholder. Defaults
+      # match the dev/test profile's own default credentials in
+      # application.yml, so local Docker use and local `mvn spring-boot:run`
+      # use behave the same way by default.
+      AUTH_USERNAME: ${AUTH_USERNAME:-admin}
+      AUTH_PASSWORD: ${AUTH_PASSWORD:-admin}
     ports:
       - "${APP_PORT:-8080}:8080"
     healthcheck:

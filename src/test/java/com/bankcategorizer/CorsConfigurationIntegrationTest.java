@@ -1,10 +1,13 @@
 package com.bankcategorizer;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -15,6 +18,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -53,9 +57,35 @@ class CorsConfigurationIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    private String bearerToken;
+
+    /**
+     * Logs in for real (dev/test profile default credentials {@code admin}/{@code admin}) so
+     * the allowed-origin case below - a genuine {@code /api/v1/**} request, which requires
+     * authentication since US-13 - can assert 200 rather than 401. The disallowed-origin and
+     * preflight cases don't need a token: Spring Security's {@code CorsFilter} rejects/handles
+     * those before the request ever reaches the authorization check (see {@code SecurityConfig}).
+     */
+    @BeforeEach
+    void logIn() throws Exception {
+        String responseBody = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"admin","password":"admin"}
+                                """))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        bearerToken = objectMapper.readTree(responseBody).get("token").asText();
+    }
+
     @Test
     void allowedOrigin_apiRequest_getsCorsHeader() throws Exception {
-        mockMvc.perform(get("/api/v1/categories").header(HttpHeaders.ORIGIN, ALLOWED_ORIGIN))
+        mockMvc.perform(get("/api/v1/categories")
+                        .header(HttpHeaders.ORIGIN, ALLOWED_ORIGIN)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + bearerToken))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, ALLOWED_ORIGIN));
     }

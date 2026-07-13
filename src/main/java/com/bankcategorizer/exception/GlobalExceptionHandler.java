@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -70,6 +71,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleInvalidSpendingComparisonRequest(InvalidSpendingComparisonRequestException ex) {
         log.warn("Invalid spending comparison request: {}", ex.getMessage());
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException ex) {
+        // Deliberately generic - never leak whether the username or the password was wrong.
+        log.warn("Authentication failed: {}", ex.getMessage());
+        return buildResponse(HttpStatus.UNAUTHORIZED, "Invalid username or password");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

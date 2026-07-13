@@ -3,10 +3,12 @@ package com.bankcategorizer;
 import com.bankcategorizer.dto.CategoryResponse;
 import com.bankcategorizer.dto.ErrorResponse;
 import com.bankcategorizer.dto.ImportResultResponse;
+import com.bankcategorizer.dto.LoginResponse;
 import com.bankcategorizer.dto.PageResponse;
 import com.bankcategorizer.dto.SpendingBreakdownResponse;
 import com.bankcategorizer.dto.SpendingResponse;
 import com.bankcategorizer.dto.TransactionResponse;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -60,14 +62,44 @@ class ImportCategorizeSpendIntegrationTest {
     @LocalServerPort
     private int port;
 
+    private TestRestTemplate restTemplate;
+    private String baseUrl;
+    private HttpHeaders authHeaders;
+
+    /**
+     * Logs in for real (via the app's own {@code /api/v1/auth/login}, dev/test profile default
+     * credentials {@code admin}/{@code admin}) and captures the issued bearer token, since every
+     * {@code /api/v1/**} endpoint now requires authentication (US-13) - the closest thing to a
+     * real client, so this drives the real login flow rather than mocking it away.
+     */
+    @BeforeEach
+    void setUp() {
+        restTemplate = new TestRestTemplate();
+        baseUrl = "http://localhost:" + port;
+
+        ResponseEntity<LoginResponse> loginResponse = restTemplate.postForEntity(
+                baseUrl + "/api/v1/auth/login", new HttpEntity<>("""
+                        {"username":"admin","password":"admin"}
+                        """, jsonHeaders()), LoginResponse.class);
+        assertThat(loginResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        LoginResponse loginBody = loginResponse.getBody();
+        assertThat(loginBody).isNotNull();
+
+        authHeaders = new HttpHeaders();
+        authHeaders.setBearerAuth(loginBody.token());
+    }
+
+    private static HttpHeaders jsonHeaders() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return headers;
+    }
+
     @Test
     void importCategorizeSpend_endToEnd_flowsThroughRealStack() {
-        TestRestTemplate restTemplate = new TestRestTemplate();
-        String baseUrl = "http://localhost:" + port;
-
         // (a) Default categories are seeded against the real, fresh database on startup.
         ResponseEntity<List<CategoryResponse>> categoriesResponse = restTemplate.exchange(
-                baseUrl + "/api/v1/categories", HttpMethod.GET, null,
+                baseUrl + "/api/v1/categories", HttpMethod.GET, new HttpEntity<>(authHeaders),
                 new ParameterizedTypeReference<List<CategoryResponse>>() {
                 });
 
@@ -102,6 +134,7 @@ class ImportCategorizeSpendIntegrationTest {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        headers.addAll(authHeaders);
         HttpEntity<MultiValueMap<String, Object>> importRequest = new HttpEntity<>(body, headers);
 
         ResponseEntity<ImportResultResponse> importResponse = restTemplate.postForEntity(
@@ -117,7 +150,7 @@ class ImportCategorizeSpendIntegrationTest {
 
         // (d) The persisted transactions reflect real JPA/Hibernate mapping against Postgres.
         ResponseEntity<PageResponse<TransactionResponse>> transactionsResponse = restTemplate.exchange(
-                baseUrl + "/api/v1/transactions", HttpMethod.GET, null,
+                baseUrl + "/api/v1/transactions", HttpMethod.GET, new HttpEntity<>(authHeaders),
                 new ParameterizedTypeReference<PageResponse<TransactionResponse>>() {
                 });
 
@@ -145,8 +178,8 @@ class ImportCategorizeSpendIntegrationTest {
         // (e) Spending total for Groceries is computed by the real aggregation query, not a mock.
         String spendingUrl = baseUrl + "/api/v1/spending?category=" + groceriesCategoryId
                 + "&from=2026-01-01&to=2026-01-31";
-        ResponseEntity<SpendingResponse> spendingResponse = restTemplate.getForEntity(
-                spendingUrl, SpendingResponse.class);
+        ResponseEntity<SpendingResponse> spendingResponse = restTemplate.exchange(
+                spendingUrl, HttpMethod.GET, new HttpEntity<>(authHeaders), SpendingResponse.class);
 
         assertThat(spendingResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
         SpendingResponse spending = spendingResponse.getBody();
@@ -159,8 +192,8 @@ class ImportCategorizeSpendIntegrationTest {
         // excludes the uncategorized transaction. The response also carries a server-computed
         // grand total across every category in the breakdown.
         String breakdownUrl = baseUrl + "/api/v1/spending?from=2026-01-01&to=2026-01-31";
-        ResponseEntity<SpendingBreakdownResponse> breakdownResponse = restTemplate.getForEntity(
-                breakdownUrl, SpendingBreakdownResponse.class);
+        ResponseEntity<SpendingBreakdownResponse> breakdownResponse = restTemplate.exchange(
+                breakdownUrl, HttpMethod.GET, new HttpEntity<>(authHeaders), SpendingBreakdownResponse.class);
 
         assertThat(breakdownResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
         SpendingBreakdownResponse breakdownBody = breakdownResponse.getBody();
@@ -183,9 +216,6 @@ class ImportCategorizeSpendIntegrationTest {
      */
     @Test
     void importOversizedFile_respondsWith413Promptly() {
-        TestRestTemplate restTemplate = new TestRestTemplate();
-        String baseUrl = "http://localhost:" + port;
-
         // One byte over the 15MB (spring.servlet.multipart.max-file-size) limit.
         byte[] oversizedContent = new byte[15 * 1024 * 1024 + 1];
 
@@ -201,6 +231,7 @@ class ImportCategorizeSpendIntegrationTest {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        headers.addAll(authHeaders);
         HttpEntity<MultiValueMap<String, Object>> importRequest = new HttpEntity<>(body, headers);
 
         Instant start = Instant.now();

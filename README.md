@@ -52,12 +52,15 @@ export DB_USERNAME=<your-username>
 export DB_PASSWORD=<your-password>
 ```
 
-`dev` and `test` also default the CORS-allowed frontend origin to the Vite dev
-server's default origin if `FRONTEND_ORIGIN` isn't set:
+`dev` and `test` also default the CORS-allowed frontend origin, and the single
+login credential pair, if `FRONTEND_ORIGIN`/`AUTH_USERNAME`/`AUTH_PASSWORD`
+aren't set:
 
 | Variable | Purpose | Default |
 |---|---|---|
 | `FRONTEND_ORIGIN` | Origin allowed to make cross-origin requests to `/api/v1/**` and `/actuator/health` | `http://localhost:5173` |
+| `AUTH_USERNAME` | Username required to log in (see "Authentication" below) | `admin` |
+| `AUTH_PASSWORD` | Password required to log in | `admin` |
 
 The `prod` profile has no defaults and requires all of the following
 environment variables to be set:
@@ -68,6 +71,8 @@ environment variables to be set:
 | `DB_USERNAME` | Database user | `postgres` |
 | `DB_PASSWORD` | Database password | `postgres` |
 | `FRONTEND_ORIGIN` | Origin allowed to make cross-origin requests to `/api/v1/**` and `/actuator/health` | `https://app.example.com` |
+| `AUTH_USERNAME` | Username required to log in (see "Authentication" below) | a value only you know |
+| `AUTH_PASSWORD` | Password required to log in | a value only you know |
 
 ### 3. Build the project
 
@@ -126,6 +131,8 @@ cp .env.example .env
 | `APP_PORT` | Host-side port mapped to the app's `8080` | `8080` |
 | `FRONTEND_PORT` | Host-side port mapped to the frontend's Nginx `80` | `3000` |
 | `FRONTEND_ORIGIN` | Origin the app allows CORS requests from — must match wherever the frontend is actually reachable | `http://localhost:${FRONTEND_PORT:-3000}` |
+| `AUTH_USERNAME` | Username required to log in (see "Authentication" below) | `admin` |
+| `AUTH_PASSWORD` | Password required to log in (see "Authentication" below) | `admin` |
 
 ### 2. Build and run
 
@@ -150,9 +157,12 @@ for the Spring context and Flyway migrations to finish before it can respond.
 The app is reachable at `http://localhost:8080` (or `$APP_PORT` if overridden), e.g.:
 
 ```bash
-curl http://localhost:8080/api/v1/categories
 curl http://localhost:8080/actuator/health
 ```
+
+`/api/v1/**` endpoints (e.g. `/api/v1/categories`) require a bearer token first —
+log in with `AUTH_USERNAME`/`AUTH_PASSWORD` (defaults above) as described in
+"Authentication" below.
 
 The frontend (an Nginx-served static build of `frontend/`) is reachable at
 `http://localhost:3000` (or `$FRONTEND_PORT` if overridden) once `docker compose up`
@@ -221,6 +231,51 @@ bank_categorizer/
 └── README.md
 ```
 
+## Authentication
+
+Every `/api/v1/**` endpoint requires authentication (`/actuator/health` is the only
+exception, kept open for container healthchecks). This is a single-user app: there's
+one hardcoded username/password pair, configured via `AUTH_USERNAME`/`AUTH_PASSWORD`
+(see the environment variable tables above) — not multi-account/multi-tenant.
+
+Authentication is a simple bearer token, not a session cookie (the frontend and
+backend are cross-origin even in local dev, and browsers require
+`SameSite=None; Secure` for cross-site cookies, which plain HTTP local dev can't
+satisfy):
+
+1. **Log in** to obtain a token:
+
+   ```bash
+   curl -X POST http://localhost:8080/api/v1/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"username":"admin","password":"admin"}'
+   ```
+
+   Returns `200` with `{"token":"<opaque-token>"}` on success, or `401` with the
+   standard error body (`{timestamp, status, error, message}`) on invalid
+   credentials, or `400` if either field is missing.
+
+2. **Send the token** on every subsequent request via the `Authorization` header:
+
+   ```bash
+   curl http://localhost:8080/api/v1/categories \
+     -H "Authorization: Bearer <opaque-token>"
+   ```
+
+   A missing or invalid/expired token returns `401` with the same standard error
+   body. Tokens are held in memory only (no database table), expire after 24h, and
+   are all invalidated on app restart.
+
+3. **Log out** to invalidate the token immediately instead of waiting for it to
+   expire:
+
+   ```bash
+   curl -X POST http://localhost:8080/api/v1/auth/logout \
+     -H "Authorization: Bearer <opaque-token>"
+   ```
+
+   Returns `204 No Content`.
+
 ## API Reference
 
 <table>
@@ -233,6 +288,37 @@ bank_categorizer/
 </tr>
 </thead>
 <tbody>
+
+<tr>
+<td><code>POST /api/v1/auth/login</code></td>
+<td>Logs in with the single configured credential pair (see "Authentication" above) and returns a bearer token. Reachable without authentication. Fails with <code>401</code> on invalid credentials, <code>400</code> if either field is missing.</td>
+<td>
+
+```json
+{
+  "username": "admin",
+  "password": "admin"
+}
+```
+
+</td>
+<td>
+
+```json
+{
+  "token": "opaque-bearer-token"
+}
+```
+
+</td>
+</tr>
+
+<tr>
+<td><code>POST /api/v1/auth/logout</code></td>
+<td>Invalidates the presented bearer token immediately, instead of waiting for it to expire. Requires authentication, same as every other <code>/api/v1/**</code> endpoint.</td>
+<td>—</td>
+<td><code>204 No Content</code> (empty body)</td>
+</tr>
 
 <tr>
 <td><code>POST /api/v1/categories</code></td>

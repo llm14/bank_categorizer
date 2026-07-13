@@ -123,7 +123,7 @@ As a user, I want a total spent across *all* categories for whatever period I'm 
 - Existing single-category behavior for both endpoints is unchanged — this only adds the all-categories total as an option, not a replacement.
 - Covered by tests the same way existing spending endpoints are (Mockito service tests + MockMvc slice tests), and the Postman collection is updated to document the new/changed response shapes.
 
-### US-13: User login 🔜
+### US-13: User login ✅
 As a user, I want to log in before I can use the app so that my transactions and categories aren't reachable by anyone who can hit the API — this ends the app's current fully-open, no-auth state now that it has a real browser UI (previously tracked as "Authentication" in `BACKLOG.md`). This is the backend counterpart FE-11 (Stage 5) builds a login screen against.
 
 **Acceptance criteria:**
