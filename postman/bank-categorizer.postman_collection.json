@@ -110,6 +110,26 @@
           "response": []
         },
         {
+          "name": "Create Transaction",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-07-01\",\n  \"description\": \"MERCADONA MADRID\",\n  \"amount\": -54.32\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "transactions"]
+            },
+            "description": "Manually adds a single transaction (date, description, signed amount — expenses negative, income positive) and runs it through the same auto-categorization as an imported row. 400 if date, description, or amount is missing/invalid."
+          },
+          "response": []
+        },
+        {
           "name": "List All Transactions",
           "request": {
             "method": "GET",

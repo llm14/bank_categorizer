@@ -27,6 +27,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -95,6 +96,57 @@ class TransactionControllerTest {
     @Test
     void findAll_unsupportedFilterValue_returns400() throws Exception {
         mockMvc.perform(get("/api/v1/transactions").param("category", "groceries"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void create_validRequest_returns201WithCreatedTransaction() throws Exception {
+        given(transactionService.create(any())).willReturn(
+                new TransactionResponse(5L, LocalDate.of(2024, 1, 1), "MERCADONA MADRID", new BigDecimal("-54.32"), 1L, "Groceries"));
+
+        mockMvc.perform(post("/api/v1/transactions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"date":"2024-01-01","description":"MERCADONA MADRID","amount":-54.32}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(5))
+                .andExpect(jsonPath("$.description").value("MERCADONA MADRID"))
+                .andExpect(jsonPath("$.amount").value(-54.32))
+                .andExpect(jsonPath("$.categoryId").value(1))
+                .andExpect(jsonPath("$.categoryName").value("Groceries"));
+    }
+
+    @Test
+    void create_missingDescription_returns400() throws Exception {
+        mockMvc.perform(post("/api/v1/transactions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"date":"2024-01-01","description":"","amount":-54.32}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void create_missingDate_returns400() throws Exception {
+        mockMvc.perform(post("/api/v1/transactions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"description":"MERCADONA MADRID","amount":-54.32}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void create_missingAmount_returns400() throws Exception {
+        mockMvc.perform(post("/api/v1/transactions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"date":"2024-01-01","description":"MERCADONA MADRID"}
+                                """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400));
     }

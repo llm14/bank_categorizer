@@ -314,6 +314,36 @@ bank_categorizer/
 </tr>
 
 <tr>
+<td><code>POST /api/v1/transactions</code></td>
+<td>Manually adds a single transaction, auto-categorizing it via the same keyword matching used by import (not left uncategorized by default).</td>
+<td>
+
+```json
+{
+  "date": "2026-07-01",
+  "description": "MERCADONA MADRID",
+  "amount": -54.32
+}
+```
+
+</td>
+<td>
+
+```json
+{
+  "id": 11,
+  "date": "2026-07-01",
+  "description": "MERCADONA MADRID",
+  "amount": -54.32,
+  "categoryId": 1,
+  "categoryName": "Groceries"
+}
+```
+
+</td>
+</tr>
+
+<tr>
 <td><code>GET /api/v1/transactions?category={uncategorized}&page={n}&size={n}&sort={field,dir}</code></td>
 <td>Lists transactions page by page (defaults: page 0, size 20, sorted by date descending), optionally filtered to only uncategorized ones via <code>?category=uncategorized</code>.</td>
 <td>—</td>
