@@ -92,6 +92,8 @@ describe("SpendingDashboard", () => {
     expect(screen.getByText("100")).toBeInTheDocument();
     expect(screen.getByRole("cell", { name: "Dining" })).toBeInTheDocument();
     expect(screen.getByText("50")).toBeInTheDocument();
+    expect(screen.getByText(/total spent \(all categories\)/i)).toBeInTheDocument();
+    expect(screen.getByText("150")).toBeInTheDocument();
     expect(mockedGetSpendingForCategory).not.toHaveBeenCalled();
   });
 
