@@ -225,7 +225,7 @@
                 { "key": "to", "value": "{{toDate}}" }
               ]
             },
-            "description": "Same as 'Get Spending Total by Category' but with `category` omitted: returns a breakdown of totals across every category that had activity in the range. Uncategorized transactions are excluded."
+            "description": "Same as 'Get Spending Total by Category' but with `category` omitted: returns a breakdown of totals across every category that had activity in the range, plus a server-computed grand total across all of them. Uncategorized transactions are excluded.\n\nExample response:\n```json\n{\n  \"breakdown\": [\n    { \"categoryId\": 1, \"categoryName\": \"Groceries\", \"from\": \"2026-06-01\", \"to\": \"2026-06-30\", \"totalSpent\": 150.32 },\n    { \"categoryId\": 2, \"categoryName\": \"Transport\", \"from\": \"2026-06-01\", \"to\": \"2026-06-30\", \"totalSpent\": 40.00 }\n  ],\n  \"totalSpent\": 190.32\n}\n```\n`totalSpent` is the sum of each breakdown entry's (already absolute-valued) `totalSpent` — i.e. what you'd get adding up the list yourself, computed once server-side."
           },
           "response": []
         },
@@ -244,7 +244,7 @@
                 { "key": "lookback", "value": "{{lookback}}" }
               ]
             },
-            "description": "Compares category `categoryId`'s spending in the current calendar month against each of the previous `lookback` months, plus their average. Only `period=month` is currently supported; anything else returns 400. `lookback` must be a positive integer no greater than 24; out-of-range values also return 400."
+            "description": "Compares category `categoryId`'s spending in the current calendar month against each of the previous `lookback` months, plus their average. Only `period=month` is currently supported; anything else returns 400. `lookback` must be a positive integer no greater than 24; out-of-range values also return 400.\n\n`category` is now optional. Omit it to compare total spending across *all* categories combined instead of a single one; `categoryId`/`categoryName` are then `null` in the response, e.g.:\n```json\n{\n  \"categoryId\": null,\n  \"categoryName\": null,\n  \"period\": \"month\",\n  \"lookback\": 3,\n  \"current\": { \"label\": \"2026-07\", \"from\": \"2026-07-01\", \"to\": \"2026-07-31\", \"totalSpent\": 823.10 },\n  \"previousPeriods\": [ { \"label\": \"2026-06\", \"from\": \"2026-06-01\", \"to\": \"2026-06-30\", \"totalSpent\": 650.00 } ],\n  \"previousAverage\": 650.00\n}\n```\nTo compare a single category instead (existing behavior, unchanged), pass `category` as before."
           },
           "response": []
         }

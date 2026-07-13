@@ -1,5 +1,6 @@
 package com.bankcategorizer.controller;
 
+import com.bankcategorizer.dto.SpendingBreakdownResponse;
 import com.bankcategorizer.dto.SpendingComparisonResponse;
 import com.bankcategorizer.dto.SpendingResponse;
 import com.bankcategorizer.service.SpendingComparisonService;
@@ -12,11 +13,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
-import java.util.List;
 
 /**
  * Endpoint for answering "how much did I spend?" over a date range: a single category's
- * total when {@code category} is given, or a breakdown across all categories otherwise.
+ * total when {@code category} is given, or a breakdown across all categories (plus its
+ * grand total) otherwise. {@code /compare} follows the same rule: comparing a single
+ * category's periods when {@code category} is given, or all categories combined when
+ * it's omitted.
  */
 @RestController
 @RequestMapping("/api/v1/spending")
@@ -40,16 +43,16 @@ public class SpendingController {
     }
 
     @GetMapping(params = "!category")
-    public ResponseEntity<List<SpendingResponse>> getSpendingBreakdown(
+    public ResponseEntity<SpendingBreakdownResponse> getSpendingBreakdown(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        List<SpendingResponse> breakdown = spendingService.getSpendingBreakdown(from, to);
+        SpendingBreakdownResponse breakdown = spendingService.getSpendingBreakdown(from, to);
         return ResponseEntity.ok(breakdown);
     }
 
     @GetMapping("/compare")
     public ResponseEntity<SpendingComparisonResponse> compareSpending(
-            @RequestParam Long category,
+            @RequestParam(required = false) Long category,
             @RequestParam(required = false) String period,
             @RequestParam(required = false) Integer lookback) {
         SpendingComparisonResponse response = spendingComparisonService.compare(category, period, lookback);

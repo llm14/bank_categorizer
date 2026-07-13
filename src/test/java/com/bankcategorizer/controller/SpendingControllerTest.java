@@ -2,6 +2,7 @@ package com.bankcategorizer.controller;
 
 import com.bankcategorizer.config.ClockConfig;
 import com.bankcategorizer.dto.PeriodSpending;
+import com.bankcategorizer.dto.SpendingBreakdownResponse;
 import com.bankcategorizer.dto.SpendingComparisonResponse;
 import com.bankcategorizer.dto.SpendingResponse;
 import com.bankcategorizer.exception.InvalidDateRangeException;
@@ -60,19 +61,23 @@ class SpendingControllerTest {
     }
 
     @Test
-    void getSpending_withoutCategory_returns200WithBreakdown() throws Exception {
-        given(spendingService.getSpendingBreakdown(from, to)).willReturn(List.of(
-                new SpendingResponse(1L, "Groceries", from, to, new BigDecimal("150.32")),
-                new SpendingResponse(2L, "Transport", from, to, new BigDecimal("40.00"))
+    void getSpending_withoutCategory_returns200WithBreakdownAndTotal() throws Exception {
+        given(spendingService.getSpendingBreakdown(from, to)).willReturn(new SpendingBreakdownResponse(
+                List.of(
+                        new SpendingResponse(1L, "Groceries", from, to, new BigDecimal("150.32")),
+                        new SpendingResponse(2L, "Transport", from, to, new BigDecimal("40.00"))
+                ),
+                new BigDecimal("190.32")
         ));
 
         mockMvc.perform(get("/api/v1/spending")
                         .param("from", "2024-01-01")
                         .param("to", "2024-01-31"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].categoryName").value("Groceries"))
-                .andExpect(jsonPath("$[1].categoryName").value("Transport"));
+                .andExpect(jsonPath("$.breakdown.length()").value(2))
+                .andExpect(jsonPath("$.breakdown[0].categoryName").value("Groceries"))
+                .andExpect(jsonPath("$.breakdown[1].categoryName").value("Transport"))
+                .andExpect(jsonPath("$.totalSpent").value(190.32));
     }
 
     @Test
@@ -188,15 +193,24 @@ class SpendingControllerTest {
     }
 
     @Test
-    void compareSpending_missingCategory_returns400() throws Exception {
+    void compareSpending_missingCategory_returns200WithAllCategoriesComparison() throws Exception {
+        PeriodSpending current = new PeriodSpending("2026-07", LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31), new BigDecimal("300.00"));
+        PeriodSpending previous = new PeriodSpending("2026-06", LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30), new BigDecimal("100.00"));
+        SpendingComparisonResponse response = new SpendingComparisonResponse(
+                null, null, "month", 1, current, List.of(previous), new BigDecimal("100.00"));
+        given(spendingComparisonService.compare(null, "month", 1)).willReturn(response);
+
         mockMvc.perform(get("/api/v1/spending/compare")
                         .param("period", "month")
-                        .param("lookback", "3"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.error").value("Bad Request"))
-                .andExpect(jsonPath("$.message").value("Required parameter 'category' is missing"))
-                .andExpect(jsonPath("$.timestamp").exists());
+                        .param("lookback", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.categoryId").doesNotExist())
+                .andExpect(jsonPath("$.categoryName").doesNotExist())
+                .andExpect(jsonPath("$.period").value("month"))
+                .andExpect(jsonPath("$.lookback").value(1))
+                .andExpect(jsonPath("$.current.totalSpent").value(300.00))
+                .andExpect(jsonPath("$.previousPeriods.length()").value(1))
+                .andExpect(jsonPath("$.previousAverage").value(100.00));
     }
 
     @Test

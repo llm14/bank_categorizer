@@ -114,7 +114,7 @@ As a user, I want to manually add a single transaction (not just via CSV/XLSX im
 - Required-field validation (400 on a missing/invalid date, description, or amount) follows this project's existing Bean Validation + `GlobalExceptionHandler` convention.
 - The created transaction follows the same signed-amount convention as everything else (expenses negative, income positive) — no special-case sign handling for manually-added rows.
 
-### US-12: Period and comparison totals across all categories 🔜
+### US-12: Period and comparison totals across all categories ✅
 As a user, I want a total spent across *all* categories for whatever period I'm looking at, not just a per-category breakdown, so I get the "how much did I spend, full stop" answer without adding up the list myself. This is the backend counterpart FE-10 (Stage 5) surfaces in the Spending dashboard and Spending comparison screens.
 
 **Acceptance criteria:**
