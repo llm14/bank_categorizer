@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Spring Boot backend that ingests a user's bank statement (CSV/XLSX), auto-categorizes each transaction by matching its description against per-category keywords, and answers spending questions (totals by category over a period, period-over-period comparisons). Single-user, local app — no auth yet.
 
+This file covers the backend (`src/`). The `frontend/` React app has its own `frontend/CLAUDE.md`.
+
 ## Commands
 
 The project ships with the Maven Wrapper (`mvnw` / `mvnw.cmd`), pinned to a fixed
