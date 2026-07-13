@@ -18,6 +18,13 @@ spring:
       max-file-size: 15MB
       max-request-size: 15MB
 
+app:
+  auth:
+    # Non-sliding expiry for issued bearer tokens; reset on app restart since tokens are only
+    # ever held in-memory (see service.TokenStore) - an acceptable tradeoff for a single-user,
+    # local-first tool that doesn't warrant persisting sessions across restarts.
+    token-ttl: PT24H
+
 server:
   tomcat:
     # Tomcat's default max-swallow-size (2MB) is well under our 15MB upload limit. When a
@@ -64,6 +71,11 @@ spring:
 app:
   cors:
     allowed-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+  auth:
+    # Dev-only default credentials (matches the DB_USERNAME:postgres-style pattern already used
+    # for the datasource) - never defaulted in prod, see below.
+    username: ${AUTH_USERNAME:admin}
+    password: ${AUTH_PASSWORD:admin}
 
 logging:
   level:
@@ -86,6 +98,9 @@ spring:
 app:
   cors:
     allowed-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+  auth:
+    username: ${AUTH_USERNAME:admin}
+    password: ${AUTH_PASSWORD:admin}
 
 ---
 spring:
@@ -104,6 +119,10 @@ spring:
 app:
   cors:
     allowed-origin: ${FRONTEND_ORIGIN}
+  auth:
+    # No default - prod fails to start if these aren't set, matching DB_URL/FRONTEND_ORIGIN.
+    username: ${AUTH_USERNAME}
+    password: ${AUTH_PASSWORD}
 
 logging:
   level:

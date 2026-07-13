@@ -2,11 +2,18 @@
   "info": {
     "_postman_id": "b4a2f1e0-6c3d-4f2a-9e7a-1d2c3b4a5e6f",
     "name": "Bank Categorizer",
-    "description": "Manual test collection for the Bank Categorizer API: import bank statements, manage categories, auto/manually categorize transactions, and answer spending questions.\n\nSuggested workflow:\n1. Run \"Categories > Create Category\" a few times (or rely on the default seeded categories created automatically on first app startup).\n2. Run \"Transactions > Import Transactions\" with a sample file from the repo's `samples/` folder.\n3. Browse \"Transactions > List All Transactions\" / \"List Uncategorized Transactions\", then use \"Update Transaction Category\" to fix any of them.\n4. Use the \"Spending\" folder to query totals and period comparisons.\n\nAll requests use the `{{baseUrl}}` collection variable (defaults to `http://localhost:8080`) plus a few convenience variables (`categoryId`, `transactionId`, dates) you can edit per request or at the collection level.",
+    "description": "Manual test collection for the Bank Categorizer API: import bank statements, manage categories, auto/manually categorize transactions, and answer spending questions.\n\nSuggested workflow:\n1. Run \"Auth > Login\" first (default dev/test credentials admin/admin) - saves the returned bearer token into the `authToken` collection variable, which every other request below sends automatically via the collection-level Authorization header. Every endpoint except this one and `/actuator/health` requires it.\n2. Run \"Categories > Create Category\" a few times (or rely on the default seeded categories created automatically on first app startup).\n3. Run \"Transactions > Import Transactions\" with a sample file from the repo's `samples/` folder.\n4. Browse \"Transactions > List All Transactions\" / \"List Uncategorized Transactions\", then use \"Update Transaction Category\" to fix any of them.\n5. Use the \"Spending\" folder to query totals and period comparisons.\n\nAll requests use the `{{baseUrl}}` collection variable (defaults to `http://localhost:8080`) plus a few convenience variables (`categoryId`, `transactionId`, dates) you can edit per request or at the collection level.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{authToken}}", "type": "string" }
+    ]
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:8080", "description": "Base URL of the running app" },
+    { "key": "authToken", "value": "", "description": "Bearer token returned by 'Auth > Login'; auto-filled by that request's test script, sent by every other request via the collection-level Authorization header" },
     { "key": "categoryId", "value": "1", "description": "A category id to use in requests below; auto-filled by 'Create Category' if run first" },
     { "key": "transactionId", "value": "1", "description": "A transaction id to use in PATCH requests; find one via 'List All Transactions'" },
     { "key": "fromDate", "value": "2026-06-01", "description": "Start of a spending date range (ISO yyyy-MM-dd)" },
@@ -14,6 +21,60 @@
     { "key": "lookback", "value": "3", "description": "Number of previous months to compare against in the spending/compare endpoint" }
   ],
   "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "auth": { "type": "noauth" },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const body = pm.response.json();",
+                  "    pm.collectionVariables.set('authToken', body.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Logs in with the single configured credential pair (dev/test default shown here is admin/admin - see AUTH_USERNAME/AUTH_PASSWORD in the README). On success, saves the returned bearer token into the `authToken` collection variable, sent automatically by every other request in this collection via its collection-level Authorization header.\n\nReachable without authentication. 401 on invalid credentials, 400 if either field is missing."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "logout"]
+            },
+            "description": "Invalidates the current `authToken` immediately rather than waiting for it to expire (24h). Requires authentication, same as every other `/api/v1/**` endpoint. Run 'Login' again afterwards to keep using the collection."
+          },
+          "response": []
+        }
+      ]
+    },
     {
       "name": "Categories",
       "item": [

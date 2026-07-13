@@ -6,6 +6,7 @@ import com.bankcategorizer.exception.InvalidFileFormatException;
 import com.bankcategorizer.service.TransactionImportService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -22,7 +23,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+// Security filters (see SecurityConfig, added by US-13) are disabled here: this slice tests
+// controller logic, not authentication, which has its own dedicated tests.
 @WebMvcTest(TransactionImportController.class)
+@AutoConfigureMockMvc(addFilters = false)
 @Import(ClockConfig.class)
 class TransactionImportControllerTest {
 
