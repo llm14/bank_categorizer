@@ -2,7 +2,6 @@ package com.bankcategorizer.service;
 
 import com.bankcategorizer.dto.PeriodSpending;
 import com.bankcategorizer.dto.SpendingComparisonResponse;
-import com.bankcategorizer.dto.SpendingResponse;
 import com.bankcategorizer.exception.InvalidSpendingComparisonRequestException;
 import com.bankcategorizer.exception.ResourceNotFoundException;
 import com.bankcategorizer.model.Category;
@@ -22,6 +21,11 @@ import java.util.List;
 /**
  * Business logic for comparing a category's spending in the current period against its
  * previous periods (e.g. "groceries this month vs. the average of the last 3 months").
+ *
+ * <p>When {@code categoryId} is {@code null}, compares total spending across all categories
+ * instead of a single one — {@code categoryId}/{@code categoryName} stay {@code null} in the
+ * response, and each period's total is computed via {@link SpendingService#getSpendingBreakdown}
+ * rather than {@link SpendingService#getSpendingForCategory}.
  *
  * <p>Only "month" (calendar month) is currently supported as a period granularity; the
  * "current period" is the calendar month containing {@link Clock#instant()}, resolved via an
@@ -49,8 +53,14 @@ public class SpendingComparisonService {
         validatePeriod(period);
         validateLookback(lookback);
 
-        Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new ResourceNotFoundException("Category %d not found".formatted(categoryId)));
+        Long resolvedCategoryId = null;
+        String resolvedCategoryName = null;
+        if (categoryId != null) {
+            Category category = categoryRepository.findById(categoryId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Category %d not found".formatted(categoryId)));
+            resolvedCategoryId = category.getId();
+            resolvedCategoryName = category.getName();
+        }
 
         YearMonth currentMonth = YearMonth.now(clock);
         PeriodSpending current = spendingForMonth(categoryId, currentMonth);
@@ -63,8 +73,8 @@ public class SpendingComparisonService {
         BigDecimal previousAverage = averageOf(previousPeriods);
 
         return new SpendingComparisonResponse(
-                category.getId(),
-                category.getName(),
+                resolvedCategoryId,
+                resolvedCategoryName,
                 MONTH_PERIOD,
                 lookback,
                 current,
@@ -75,8 +85,10 @@ public class SpendingComparisonService {
     private PeriodSpending spendingForMonth(Long categoryId, YearMonth month) {
         LocalDate from = month.atDay(1);
         LocalDate to = month.atEndOfMonth();
-        SpendingResponse spending = spendingService.getSpendingForCategory(categoryId, from, to);
-        return new PeriodSpending(month.toString(), from, to, spending.totalSpent());
+        BigDecimal totalSpent = categoryId != null
+                ? spendingService.getSpendingForCategory(categoryId, from, to).totalSpent()
+                : spendingService.getSpendingBreakdown(from, to).totalSpent();
+        return new PeriodSpending(month.toString(), from, to, totalSpent);
     }
 
     private BigDecimal averageOf(List<PeriodSpending> periods) {

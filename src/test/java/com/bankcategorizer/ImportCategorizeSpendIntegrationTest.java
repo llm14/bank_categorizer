@@ -4,6 +4,7 @@ import com.bankcategorizer.dto.CategoryResponse;
 import com.bankcategorizer.dto.ErrorResponse;
 import com.bankcategorizer.dto.ImportResultResponse;
 import com.bankcategorizer.dto.PageResponse;
+import com.bankcategorizer.dto.SpendingBreakdownResponse;
 import com.bankcategorizer.dto.SpendingResponse;
 import com.bankcategorizer.dto.TransactionResponse;
 import org.junit.jupiter.api.Test;
@@ -155,18 +156,20 @@ class ImportCategorizeSpendIntegrationTest {
 
         // (f) The category breakdown is computed by the real GROUP BY projection query (JPQL
         // "SELECT NEW ...record..." constructor expression) against Postgres, not a mock, and
-        // excludes the uncategorized transaction.
+        // excludes the uncategorized transaction. The response also carries a server-computed
+        // grand total across every category in the breakdown.
         String breakdownUrl = baseUrl + "/api/v1/spending?from=2026-01-01&to=2026-01-31";
-        ResponseEntity<List<SpendingResponse>> breakdownResponse = restTemplate.exchange(
-                breakdownUrl, HttpMethod.GET, null, new ParameterizedTypeReference<List<SpendingResponse>>() {
-                });
+        ResponseEntity<SpendingBreakdownResponse> breakdownResponse = restTemplate.getForEntity(
+                breakdownUrl, SpendingBreakdownResponse.class);
 
         assertThat(breakdownResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        List<SpendingResponse> breakdown = breakdownResponse.getBody();
-        assertThat(breakdown).isNotNull();
+        SpendingBreakdownResponse breakdownBody = breakdownResponse.getBody();
+        assertThat(breakdownBody).isNotNull();
+        List<SpendingResponse> breakdown = breakdownBody.breakdown();
         assertThat(breakdown).hasSize(1);
         assertThat(breakdown.get(0).categoryId()).isEqualTo(groceriesCategoryId);
         assertThat(breakdown.get(0).totalSpent()).isEqualByComparingTo(new BigDecimal("45.30"));
+        assertThat(breakdownBody.totalSpent()).isEqualByComparingTo(new BigDecimal("45.30"));
     }
 
     /**

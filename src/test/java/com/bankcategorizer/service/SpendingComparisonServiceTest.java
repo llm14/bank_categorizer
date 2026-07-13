@@ -1,5 +1,6 @@
 package com.bankcategorizer.service;
 
+import com.bankcategorizer.dto.SpendingBreakdownResponse;
 import com.bankcategorizer.dto.SpendingComparisonResponse;
 import com.bankcategorizer.dto.SpendingResponse;
 import com.bankcategorizer.exception.InvalidSpendingComparisonRequestException;
@@ -17,6 +18,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -115,6 +117,33 @@ class SpendingComparisonServiceTest {
     }
 
     @Test
+    void compare_nullCategoryId_comparesAllCategoriesAndSkipsCategoryLookup() {
+        mockBreakdownTotal(LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31), "300.00");
+        mockBreakdownTotal(LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30), "100.00");
+        mockBreakdownTotal(LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), "50.00");
+
+        SpendingComparisonResponse response = spendingComparisonService.compare(null, "month", 2);
+
+        assertThat(response.categoryId()).isNull();
+        assertThat(response.categoryName()).isNull();
+        assertThat(response.period()).isEqualTo("month");
+        assertThat(response.lookback()).isEqualTo(2);
+
+        assertThat(response.current().label()).isEqualTo("2026-07");
+        assertThat(response.current().totalSpent()).isEqualByComparingTo("300.00");
+
+        assertThat(response.previousPeriods()).hasSize(2);
+        assertThat(response.previousPeriods().get(0).totalSpent()).isEqualByComparingTo("100.00");
+        assertThat(response.previousPeriods().get(1).totalSpent()).isEqualByComparingTo("50.00");
+
+        // average(100.00, 50.00) = 75.00
+        assertThat(response.previousAverage()).isEqualByComparingTo("75.00");
+
+        verify(categoryRepository, never()).findById(any());
+        verify(spendingService, never()).getSpendingForCategory(any(), any(), any());
+    }
+
+    @Test
     void compare_categoryNotFound_throwsResourceNotFoundException() {
         when(categoryRepository.findById(99L)).thenReturn(Optional.empty());
 
@@ -167,5 +196,10 @@ class SpendingComparisonServiceTest {
     private void mockSpending(LocalDate from, LocalDate to, String totalSpent) {
         when(spendingService.getSpendingForCategory(eq(1L), eq(from), eq(to)))
                 .thenReturn(new SpendingResponse(1L, "Groceries", from, to, new BigDecimal(totalSpent)));
+    }
+
+    private void mockBreakdownTotal(LocalDate from, LocalDate to, String totalSpent) {
+        when(spendingService.getSpendingBreakdown(eq(from), eq(to)))
+                .thenReturn(new SpendingBreakdownResponse(List.of(), new BigDecimal(totalSpent)));
     }
 }

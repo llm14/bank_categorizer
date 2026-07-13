@@ -1,5 +1,6 @@
 package com.bankcategorizer.service;
 
+import com.bankcategorizer.dto.SpendingBreakdownResponse;
 import com.bankcategorizer.dto.SpendingResponse;
 import com.bankcategorizer.exception.InvalidDateRangeException;
 import com.bankcategorizer.exception.ResourceNotFoundException;
@@ -93,19 +94,21 @@ class SpendingServiceTest {
     }
 
     @Test
-    void getSpendingBreakdown_multipleCategories_returnsOneEntryPerCategory() {
+    void getSpendingBreakdown_multipleCategories_returnsOneEntryPerCategoryAndSummedTotal() {
         when(transactionRepository.sumAmountByCategoryGroupedForDateBetween(from, to)).thenReturn(List.of(
                 new CategorySpendingTotal(1L, "Groceries", new BigDecimal("-20.00")),
                 new CategorySpendingTotal(2L, "Transport", new BigDecimal("-5.00"))
         ));
 
-        List<SpendingResponse> breakdown = spendingService.getSpendingBreakdown(from, to);
+        SpendingBreakdownResponse response = spendingService.getSpendingBreakdown(from, to);
+        List<SpendingResponse> breakdown = response.breakdown();
 
         assertThat(breakdown).hasSize(2);
         assertThat(breakdown).extracting(SpendingResponse::categoryName).containsExactlyInAnyOrder("Groceries", "Transport");
         assertThat(breakdown).extracting(SpendingResponse::totalSpent)
                 .usingElementComparator(BigDecimal::compareTo)
                 .containsExactlyInAnyOrder(new BigDecimal("20.00"), new BigDecimal("5.00"));
+        assertThat(response.totalSpent()).isEqualByComparingTo("25.00");
     }
 
     @Test
@@ -116,19 +119,36 @@ class SpendingServiceTest {
                 new CategorySpendingTotal(1L, "Groceries", new BigDecimal("-20.00"))
         ));
 
-        List<SpendingResponse> breakdown = spendingService.getSpendingBreakdown(from, to);
+        SpendingBreakdownResponse response = spendingService.getSpendingBreakdown(from, to);
 
-        assertThat(breakdown).hasSize(1);
-        assertThat(breakdown.get(0).categoryName()).isEqualTo("Groceries");
+        assertThat(response.breakdown()).hasSize(1);
+        assertThat(response.breakdown().get(0).categoryName()).isEqualTo("Groceries");
+        assertThat(response.totalSpent()).isEqualByComparingTo("20.00");
     }
 
     @Test
-    void getSpendingBreakdown_noTransactionsInRange_returnsEmptyList() {
+    void getSpendingBreakdown_noTransactionsInRange_returnsEmptyListAndZeroTotal() {
         when(transactionRepository.sumAmountByCategoryGroupedForDateBetween(from, to)).thenReturn(List.of());
 
-        List<SpendingResponse> breakdown = spendingService.getSpendingBreakdown(from, to);
+        SpendingBreakdownResponse response = spendingService.getSpendingBreakdown(from, to);
 
-        assertThat(breakdown).isEmpty();
+        assertThat(response.breakdown()).isEmpty();
+        assertThat(response.totalSpent()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    void getSpendingBreakdown_totalSpent_sumsAbsoluteValuesNotSignedSum() {
+        // A refund netted into one category (positive) must not offset another category's
+        // expenses in the grand total: each entry's already-abs'd totalSpent is summed, not the
+        // raw signed amounts.
+        when(transactionRepository.sumAmountByCategoryGroupedForDateBetween(from, to)).thenReturn(List.of(
+                new CategorySpendingTotal(1L, "Groceries", new BigDecimal("-20.00")),
+                new CategorySpendingTotal(2L, "Credits", new BigDecimal("15.00"))
+        ));
+
+        SpendingBreakdownResponse response = spendingService.getSpendingBreakdown(from, to);
+
+        assertThat(response.totalSpent()).isEqualByComparingTo("35.00");
     }
 
     @Test

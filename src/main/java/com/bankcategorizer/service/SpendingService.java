@@ -1,5 +1,6 @@
 package com.bankcategorizer.service;
 
+import com.bankcategorizer.dto.SpendingBreakdownResponse;
 import com.bankcategorizer.dto.SpendingResponse;
 import com.bankcategorizer.exception.InvalidDateRangeException;
 import com.bankcategorizer.exception.ResourceNotFoundException;
@@ -46,13 +47,19 @@ public class SpendingService {
     }
 
     @Transactional(readOnly = true)
-    public List<SpendingResponse> getSpendingBreakdown(LocalDate from, LocalDate to) {
+    public SpendingBreakdownResponse getSpendingBreakdown(LocalDate from, LocalDate to) {
         validateRange(from, to);
         List<CategorySpendingTotal> totals = transactionRepository.sumAmountByCategoryGroupedForDateBetween(from, to);
 
-        return totals.stream()
+        List<SpendingResponse> breakdown = totals.stream()
                 .map(total -> new SpendingResponse(total.categoryId(), total.categoryName(), from, to, total.totalAmount().abs()))
                 .toList();
+
+        BigDecimal totalSpent = breakdown.stream()
+                .map(SpendingResponse::totalSpent)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return new SpendingBreakdownResponse(breakdown, totalSpent);
     }
 
     private void validateRange(LocalDate from, LocalDate to) {

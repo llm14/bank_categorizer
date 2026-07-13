@@ -401,7 +401,13 @@ bank_categorizer/
 
 <tr>
 <td><code>GET /api/v1/spending?category={id}&from={date}&to={date}</code></td>
-<td>Returns the total spent in a category over a date range. Omitting <code>category</code> instead returns a breakdown of totals across every category with activity in that range.</td>
+<td>Returns the total spent in a category over a date range (unchanged; example below). Omitting <code>category</code> instead returns a breakdown of totals across every category with activity in that range, plus a server-computed grand total across all of them, e.g.:<br><br><pre>{
+  "breakdown": [
+    { "categoryId": 1, "categoryName": "Groceries", "from": "2026-06-01", "to": "2026-06-30", "totalSpent": 245.67 },
+    { "categoryId": 2, "categoryName": "Transport", "from": "2026-06-01", "to": "2026-06-30", "totalSpent": 40.00 }
+  ],
+  "totalSpent": 285.67
+}</pre></td>
 <td>—</td>
 <td>
 
@@ -420,7 +426,7 @@ bank_categorizer/
 
 <tr>
 <td><code>GET /api/v1/spending/compare?category={id}&period=month&lookback={n}</code></td>
-<td>Compares a category's spending in the current month against each of the previous <code>lookback</code> months, plus their average. Only <code>period=month</code> is currently supported.</td>
+<td><code>category</code> is optional. When given, compares that category's spending in the current month against each of the previous <code>lookback</code> months, plus their average (unchanged; example below). When omitted, compares total spending across <em>all</em> categories combined instead, with <code>categoryId</code>/<code>categoryName</code> <code>null</code> in the response. Only <code>period=month</code> is currently supported.</td>
 <td>—</td>
 <td>
 
@@ -442,6 +448,22 @@ bank_categorizer/
     { "label": "2026-04", "from": "2026-04-01", "to": "2026-04-30", "totalSpent": 195.50 }
   ],
   "previousAverage": 217.06
+}
+```
+
+All-categories mode (`category` omitted):
+
+```json
+{
+  "categoryId": null,
+  "categoryName": null,
+  "period": "month",
+  "lookback": 1,
+  "current": { "label": "2026-07", "from": "2026-07-01", "to": "2026-07-31", "totalSpent": 823.10 },
+  "previousPeriods": [
+    { "label": "2026-06", "from": "2026-06-01", "to": "2026-06-30", "totalSpent": 650.00 }
+  ],
+  "previousAverage": 650.00
 }
 ```
 
