@@ -224,10 +224,30 @@ serves `frontend/` via Nginx as its own `frontend` service.
 bank_categorizer/
 ├── src/
 │   ├── main/
-│   │   ├── java/          # Application source code
-│   │   └── resources/     # Configuration files
-│   └── test/               # Unit and integration tests
+│   │   ├── java/com/bankcategorizer/   # controller, service, repository, model, dto, config, exception
+│   │   └── resources/
+│   │       ├── application.yml
+│   │       └── db/                     # Flyway migrations
+│   └── test/
+│       └── java/com/bankcategorizer/   # mirrors main's package structure
+├── frontend/                  # React + TypeScript SPA (see "Frontend (development)" below)
+│   ├── src/
+│   │   ├── api/                # typed API client (one file per backend endpoint group)
+│   │   ├── components/         # one screen/component per feature, with colocated tests
+│   │   └── test/
+│   └── public/
+├── docs/
+│   ├── generated_docs/
+│   ├── ARCHITECTURE.md
+│   └── COMMANDS.md
+├── postman/                   # Postman collection for manual API testing
+├── samples/                   # example CSV/XLSX statements for manual testing
+├── docker-compose.yml
+├── Dockerfile
+├── .env.example
 ├── pom.xml
+├── USER_STORIES.md
+├── BACKLOG.md
 └── README.md
 ```
 
@@ -564,7 +584,7 @@ All-categories mode (`category` omitted):
 - [x] Stage 1 — Import bank statements (CSV/XLSX upload and parsing)
 - [x] Stage 2 — Categorization (auto-categorization by keyword, manual (re)categorization)
 - [x] Stage 3 — Spending questions (totals by category, period-over-period comparison)
-- [x] Stage 4 — Deployment readiness (Flyway migrations, Docker/docker-compose, health checks, production-ready file uploads)
+- [ ] Stage 4 — Deployment readiness (Flyway migrations, Docker/docker-compose, health checks, production-ready file uploads) — mostly done; US-14 (detect already-imported transactions on re-upload) still pending
 - [x] Stage 5 — Frontend (React/TypeScript UI over the existing API)
 
 See `USER_STORIES.md` for the detailed, acceptance-criteria-level spec behind each stage.

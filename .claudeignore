@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+.m2/
+*.jar
+*.war
+
+# Build outputs
+target/
+dist/
+build/
+.vite/
+coverage/
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Test data & logs
+*.csv
+*.xlsx
+*.log
+logs/
+
+# Version control
+.git/
+.gitignore
+
+# IDE & OS
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Temp & cache
+.cache/
+*.tmp
+*.bak

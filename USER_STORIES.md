@@ -19,9 +19,9 @@ As a user, I want to upload my bank statement as a CSV or XLSX file so that my t
 
 ---
 
-## Stage 2 — Categorization (planned)
+## Stage 2 — Categorization (done)
 
-### US-2: Manage categories 🔜
+### US-2: Manage categories ✅
 As a user, I want to create, list, and delete spending categories (e.g. Groceries, Rent, Transport) so that I can organize my transactions the way I think about my spending.
 
 **Acceptance criteria:**
@@ -29,7 +29,7 @@ As a user, I want to create, list, and delete spending categories (e.g. Grocerie
 - `GET /api/v1/categories` lists all categories.
 - `DELETE /api/v1/categories/{id}` deletes a category; transactions referencing it become uncategorized rather than being deleted.
 
-### US-3: Auto-categorize imported transactions 🔜
+### US-3: Auto-categorize imported transactions ✅
 As a user, I want newly imported transactions to be automatically assigned a category based on their description so that I don't have to categorize everything by hand.
 
 **Acceptance criteria:**
@@ -39,7 +39,7 @@ As a user, I want newly imported transactions to be automatically assigned a cat
 - Import response includes how many transactions were auto-categorized vs. left uncategorized.
 - On first run (empty category table), the app seeds a default set of common categories with well-known merchant keywords, so out-of-the-box categorization works without manual setup; this seeding never overwrites or merges into an existing (non-empty) category set.
 
-### US-4: Manually (re)categorize a transaction 🔜
+### US-4: Manually (re)categorize a transaction ✅
 As a user, I want to view my uncategorized transactions and assign or correct a category myself so that I can fix mistakes the automatic categorization makes.
 
 **Acceptance criteria:**
@@ -49,16 +49,16 @@ As a user, I want to view my uncategorized transactions and assign or correct a 
 
 ---
 
-## Stage 3 — Spending questions (planned)
+## Stage 3 — Spending questions (done)
 
-### US-5: Spending total by category over a period 🔜
+### US-5: Spending total by category over a period ✅
 As a user, I want to see how much I spent in a given category over a given time period so that I can understand my spending in that area.
 
 **Acceptance criteria:**
 - `GET /api/v1/spending?category={id}&from={date}&to={date}` returns the total amount spent in that category within the range.
 - Omitting `category` returns totals broken down by category for the range.
 
-### US-6: Compare spending across periods 🔜
+### US-6: Compare spending across periods ✅
 As a user, I want to compare how much I spent in a category this period versus previous periods (e.g. "groceries this month vs. the average of the last 3 months") so that I can spot trends in my spending.
 
 **Acceptance criteria:**
