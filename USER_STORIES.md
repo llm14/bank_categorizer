@@ -246,6 +246,30 @@ As a user, I want a login screen so that I have to authenticate before reaching 
 
 ---
 
+## Stage 6 — Agent tooling quality (planned)
+
+Meta-stories about the `.claude/agents/` agents themselves, not the app — checking whether an agent invocation reliably does what it claims, starting with the smallest, lowest-risk agent first.
+
+### US-15: Eval harness for the architecture-reviewer agent 🔜
+As a developer, I want a small, repeatable eval for the `architecture-reviewer` agent so that I know whether it reliably catches known issues instead of trusting a single ad-hoc run.
+
+**Acceptance criteria:**
+- At least one seeded-issue fixture exists (e.g. a branch/diff or scratch code sample reintroducing a documented anti-pattern — the `EAGER`-doesn't-prevent-N+1 case, or a thrown exception with no `GlobalExceptionHandler` mapping — both sourced from the "Recent Conventions & Patterns" section of `java-springboot-expert.md` that the reviewer is meant to check against).
+- Running `architecture-reviewer` scoped to that fixture is graded against a short rubric: (1) the seeded issue is flagged with a correct file:line reference, (2) the report follows its documented format (file:line, what's there, why it matters, suggested fix), (3) no fabricated findings outside the seeded issue's actual scope.
+- The eval stays manual/lightweight to start — a documented rubric and fixture, run by hand — not a fully automated CI gate; automating it is a future story once the manual version proves useful.
+- Pass/fail results and any rubric misses are logged in `docs/EVAL_NOTES.md` so drift in the agent's behavior over time is visible, not just a one-off gut check.
+
+### US-16: Explore promptfoo for automating agent evals 🔜
+As a developer, I want to try promptfoo against a small eval case so that I can judge whether it's a good fit for automating this project's manual agent-eval process (US-15) before investing further in it.
+
+**Acceptance criteria:**
+- promptfoo is installed and run locally (no CI wiring yet) against a case comparable to US-15's seeded-issue fixture for `architecture-reviewer` — either that same fixture reused, or a new equivalent one if promptfoo's single-prompt/response model doesn't fit a multi-tool agent run.
+- The trial covers at minimum: one config exercising an assertion type usable for this kind of eval (e.g. LLM-as-judge grading a report against a rubric similar to US-15's three criteria), run end-to-end to produce a pass/fail result.
+- Findings are written up in `docs/EVAL_NOTES.md`: what worked, what didn't fit (e.g. promptfoo's assumption of a single prompt/response vs. this project's multi-step agent trajectories involving Read/Grep/Bash), and a recommendation — adopt, adopt partially, or stick with the manual process from US-15.
+- This is a timeboxed investigation/spike, not a commitment to migrate every eval to promptfoo — no existing manual eval workflow is removed or replaced as part of this story.
+
+---
+
 ## Backlog / not yet scoped
 
 - Editing/deleting individual transactions.
