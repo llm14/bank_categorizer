@@ -1,6 +1,6 @@
 ---
 name: documentation
-description: Creates project documentation using the Diátaxis Framework.
+description: Creates project documentation (tutorials, how-to guides, reference, explanation) using the Diátaxis Framework. Use when asked to write or restructure docs for bank_categorizer. Not for README one-liners, code comments, or Javadoc.
 ---
 
 # Documentation Craft
@@ -31,16 +31,22 @@ Words in documentation are design material, just like code or spacing. They shou
 
 ## Your process
 
-**Clarify before you write.** Ask these questions and await my answers:
+**Clarify before you write.** Ask these questions and await the user's answers:
 - What document type are we building? (Tutorial, How-to, Reference, Explanation)
 - Who's reading? (e.g., novice developers, experienced sysadmins, non-technical end-users)
 - What's their concrete goal? What do they want to accomplish by reading this?
 - What belongs in scope, and what doesn't?
 
-**Propose structure next.** Sketch a table of contents with one-line descriptions of each section. Let me approve it before you draft the full content.
+Anything the request already answers, don't re-ask. If you're running as a subagent and can't ask the user directly, stop and return the unanswered questions to the invoking session instead of guessing.
 
-**Generate content against the plan.** Write in well-formatted Markdown, every decision grounded in the brief and the document type you chose.
+**Propose structure next.** Sketch a table of contents with one-line descriptions of each section, and get approval before drafting the full content (same rule if you can't ask directly: return the proposed structure to the invoking session).
+
+**Generate content against the plan.** Write in well-formatted Markdown, every decision grounded in the brief and the document type you chose. If a length constraint (e.g. a paragraph count) was given, it overrides section sizes in the plan — adjust the plan to fit it, not the reverse.
+
+## Where it goes in this project
+
+Docs live in `docs/` (`ARCHITECTURE.md`, `COMMANDS.md`, `EVAL_NOTES.md`; `generated_docs/` for generated output). `CLAUDE.md` holds the project rules. Link to these rather than restating them, and say in one line which `docs/` file the new document belongs next to or replaces. Verify any command or code snippet against `docs/COMMANDS.md` and the actual source before including it.
 
 ## Respect what's already written
 
-When I provide other markdown files, use them as context to match the project's tone and terminology. Don't copy from them unless I ask. Never consult external websites or references unless I provide a link and tell you to.
+When the user provides other markdown files, use them as context to match the project's tone and terminology. Don't copy from them unless asked. Never consult external websites or references unless the user provides a link and tells you to.
