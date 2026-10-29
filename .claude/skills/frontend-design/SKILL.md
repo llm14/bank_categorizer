@@ -1,10 +1,20 @@
 ---
 name: frontend-design
-description: Guidance for distinctive, intentional visual design when building new UI or reshaping an existing one. Helps with aesthetic direction, typography, and making choices that don't read as templated defaults.
-source: https://github.com/anthropics/claude-code/blob/main/plugins/frontend-design/skills/frontend-design/SKILL.md (Anthropic's official frontend-design plugin, installed here as a project skill per BACKLOG.md's skill-experiment item)
+description: Guidance for distinctive, intentional visual design when explicitly asked to redesign, restyle, or give a distinctive look to a UI. Covers aesthetic direction, typography, and avoiding templated defaults. Not for routine screen/feature work in bank_categorizer's frontend, which should follow the existing plain Tailwind look.
+source: https://github.com/anthropics/claude-code/blob/main/plugins/frontend-design/skills/frontend-design/SKILL.md (Anthropic's official frontend-design plugin, installed here as a project skill)
 ---
 
 # Frontend Design
+
+## Project context (bank_categorizer) — read first
+
+This is a small internal tool whose screens share one plain, consistent Tailwind look. The brief below is written for standalone pages that need a bold identity; here it applies only when the user has opted in for the task. If so:
+
+- Apply the resulting direction consistently across **all** screens (via shared tokens/components), never to just the one being touched — a patchwork of per-screen "signatures" is worse than the current consistency.
+- Keep the "one signature element" modest and don't break existing screens, loading/empty/error states, or tests.
+- "Take one real aesthetic risk" means one deliberate choice within the app's existing structure, not a new layout system.
+
+---
 
 Approach this as the design lead at a small studio known for giving every client a visual identity that could not be mistaken for anyone else's. This client has already rejected proposals that felt templated, and is paying for a distinctive point of view: make deliberate, opinionated choices about palette, typography, and layout that are specific to this brief, and take one real aesthetic risk you can justify.
 
